@@ -1,6 +1,6 @@
 # FreeBrain — Movement Therapy for Your Brain
 
-[freethebrains.com](https://freethebrains.com) — A React + TypeScript marketing site for FreeBrain, a neuro-therapy platform offering on-demand movement therapy. Built with Vite, Tailwind CSS, shadcn/ui, and full internationalization (English, Spanish, German, Portuguese).
+[app.freethebrains.com](https://app.freethebrains.com) — A React + TypeScript marketing site for FreeBrain, a neuro-therapy platform offering on-demand movement therapy. Built with Vite, Tailwind CSS, shadcn/ui, and full internationalization (English, Spanish, German, Portuguese).
 
 ## Requirements
 
