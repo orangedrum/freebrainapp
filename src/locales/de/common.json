@@ -1,0 +1,175 @@
+{
+  "header": {
+    "joinCommunity": "Community beitreten",
+    "getInvolved": "Mitmachen"
+  },
+  "hero": {
+    "presentedBy": "The ProductShift präsentiert",
+    "headlinePre": "Befreie die",
+    "headlineHighlight": "Gehirne",
+    "subheadline": "Das Startup, das es jeder neurologischen Erkrankung überall ermöglicht, von der Bewegungstherapie abhängig zu werden, die sie besser behandelt als Pillen allein",
+    "learnMore": "Mehr erfahren",
+    "joinPilot": "Pilot beitreten"
+  },
+  "conditions": {
+    "title": "Bist du ein FreeBrainer?",
+    "statValue": "3,4 Milliarden Menschen weltweit",
+    "statDescription": "(43% der Weltbevölkerung) leben mit einer neurologischen Erkrankung, die von regelmäßiger Bewegungstherapie profitieren würde",
+    "list": {
+      "migraines": "Migräne",
+      "parkinsons": "Parkinson-Krankheit",
+      "alzheimers": "Alzheimer",
+      "essentialTremor": "Essentieller Tremor",
+      "cognitiveImpairments": "Kognitive Beeinträchtigungen",
+      "als": "ALS",
+      "cerebrovascular": "Zerebrovaskuläre Erkrankung",
+      "huntingtons": "Huntington-Krankheit",
+      "ms": "Multiple Sklerose (MS)",
+      "epilepsy": "Epilepsie",
+      "spinaBifida": "Spina bifida",
+      "dystonias": "Dystonien",
+      "dementia": "Demenz",
+      "cerebralPalsy": "Zerebralparese",
+      "diabeticNeuropathy": "Diabetische Neuropathie"
+    }
+  },
+  "onDemand": {
+    "pill": "Die Vision",
+    "title": "Therapie auf Abruf",
+    "description": "Ob auf dem Pendelweg oder in einer kurzen Pause – nimm dein Handy für eine schnelle Dosis Neuroplastizität zur Hand",
+    "features": {
+      "access": "Greife unterwegs auf die besten Therapien zu",
+      "customized": "An deinen Zustand & Komfort angepasst",
+      "habitForming": "Entwickelt für gewohnheitsbildende Konsistenz"
+    },
+    "joinPilot": "Pilot beitreten"
+  },
+  "becomeFreeBrainer": {
+    "pill": "Wege, sich mit uns zu bewegen",
+    "title": "Werde ein FreeBrainer",
+    "description": "Tritt unserer Community bei, beeinflusse die Richtung unserer App, teste unseren Piloten oder registriere deine Einrichtung für unseren nächsten Workshop",
+    "cards": {
+      "joinCommunity": {
+        "title": "Community beitreten",
+        "description": "Verbinde dich mit anderen FreeBrainern, um inspiriert und motiviert zu bleiben und beim Aufbau deiner Bewegungsplattform zu helfen.",
+        "cta": "Jetzt beitreten"
+      },
+      "bePartOfResearch": {
+        "title": "Teil der Forschung sein",
+        "description": "Das ist deine App. Sei Teil unseres explorativen Forschungsprogramms, um Funktionen nach deinen Bedürfnissen zu gestalten.",
+        "cta": "Gestalte deine App"
+      },
+      "appPilot": {
+        "title": "App-Pilot",
+        "description": "Sei der Erste, der unsere Bewegungstherapie-App testet, während sie zum Leben erwacht.",
+        "cta": "Anmelden"
+      },
+      "careFacilities": {
+        "title": "Pflegeeinrichtungen",
+        "description": "Wir bieten derzeit kostenlose Gruppensitzungen für Pflegeeinrichtungen an.",
+        "cta": "Prüfe, ob deine qualifiziert ist"
+      }
+    }
+  },
+  "getInvolved": {
+    "title": "Mitmachen",
+    "subtitle": "In dieser frühen Phase von Wachstum & Entdeckung kannst du eine wichtige Rolle in unserer Entwicklung spielen. So geht's:",
+    "cards": {
+      "freeBrainers": {
+        "title": "FreeBrainer",
+        "description": "Tritt unserer Community von Early Adoptern bei. Beeinflusse unsere Richtung, teste unseren Piloten oder registriere deine Einrichtung für unseren nächsten Workshop",
+        "cta": "Mehr erfahren"
+      },
+      "advisors": {
+        "title": "Berater",
+        "description": "Wir suchen Neurologen, Tech-Experten und Bewegungsspezialisten, die unsere klinische und technische Richtung leiten.",
+        "cta": "Als Berater bewerben"
+      },
+      "funding": {
+        "title": "Finanzierung",
+        "description": "Partnerschaft mit uns, um unser Wachstum zu beschleunigen. Wir suchen strategische Investoren, die unsere Vision teilen.",
+        "cta": "Investitionsinfo"
+      }
+    }
+  },
+  "evidence": {
+    "title": "Unterstützende Beweise",
+    "subtitle": "Erforsche die Forschung und klinischen Studien, die die Grundlage unseres Bewegungstherapie-Ansatzes bilden.",
+    "viewEvidence": "Beweis ansehen",
+    "readOn": "Lesen auf {{source}}",
+    "close": "Schließen",
+    "items": {
+      "1": "Hochintensives Training induziert gehirnschützende Effekte, die das Potenzial haben, nicht nur die Neurodegeneration bei Parkinson-Krankheit zu verlangsamen, sondern möglicherweise umzukehren, wie eine neue Pilotstudie nahelegt.",
+      "2": "Tanzen hat tatsächlich so vorteilhafte Wirkungen auf das Gehirn, dass es nun zur Behandlung von Menschen mit Parkinson-Krankheit eingesetzt wird",
+      "3": "Die richtige Art von Behandlungs- und Rehabilitationsprogrammen kann helfen, Neuroplastizität zu fördern",
+      "4": "Therapeutisches Tanzen kann die motorische Leistung und das Gleichgewicht bei Menschen mit PK vorteilhaft verbessern",
+      "5": "Bewegung kann helfen, die kognitive Funktion zu erhalten und zu verbessern und Demenz, Schlaganfall, Depression und Angst abzuwehren. Ziel sind 150 Minuten pro Woche."
+    },
+    "sources": {
+      "1": "Yale School of Medicine",
+      "2": "NCBI",
+      "3": "NeuLife Rehab",
+      "4": "NCBI",
+      "5": "Cleveland Clinic"
+    }
+  },
+  "socialFeeds": {
+    "title": "Folge uns",
+    "viewOn": "Ansehen auf {{platform}}",
+    "feeds": {
+      "instagram": {
+        "platform": "Instagram",
+        "caption": "Bewegung ist Medizin. 🧠✨ Folge uns, während wir inspirieren und Neuroplastizität erforschen"
+      },
+      "facebook": {
+        "platform": "Facebook",
+        "caption": "Unsere Facebook-Community wächst weiter! Heute teilen wir inspirierende Geschichten von FreeBrainern, die unglaubliche Fortschritte gemacht haben."
+      },
+      "tiktok": {
+        "platform": "TikTok",
+        "caption": "Schnelle 60-Sekunden-Übung, die du überall machen kannst, um deine Neuro-Wege zu stimulieren! #FreeBrain #Neuroplastizität #Bewegungstherapie"
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Positiv suchtmachende Bewegungstherapie auf Abruf für dein Gehirn",
+    "incubatorLabel": "Vertraut von Innovativer Health-Inkubator",
+    "copyright": "© {{year}} FreeBrain. Alle Rechte vorbehalten."
+  },
+  "modal": {
+    "cancel": "Abbrechen",
+    "joinPilot": {
+      "title": "Pilot beitreten",
+      "description": "Unser Pilot für die virtuelle Neuro-Therapie-App steht kurz vor dem Launch. Werde einer der ersten FreeBrainer!",
+      "cta": "Für Pilot registrieren"
+    },
+    "advisors": {
+      "title": "Als Berater bewerben",
+      "description": "Wir entwickeln Technologie basierend auf menschlichem Input. Vereinbare eine virtuelle explorative Sitzung und hinterlasse deine Spur in der Zukunft von FreeBrain",
+      "cta": "Explorative Sitzung planen"
+    },
+    "funding": {
+      "title": "Investitionsinfo",
+      "description": "Wir befinden uns in unserer Pre-Seed-Runde und nehmen virtuelle Termine mit potenziellen strategischen Investoren an. \nUnsere Finanzprognose und unser Prospekt sind auf Anfrage erhältlich.",
+      "cta": "Explorative Sitzung planen"
+    },
+    "careFacilities": {
+      "description": "Wir bieten private und Gruppensitzungen, die speziell auf neurologische Erkrankungen und Seniorenpflegeeinrichtungen zugeschnitten sind. Bedingungen und Anforderungen gelten.",
+      "cta": "Anruf zur Besprechung planen"
+    },
+    "designYourApp": {
+      "title": "Gestalte deine App",
+      "description": "Wir entwickeln Technologie basierend auf menschlichem Input. Vereinbare eine virtuelle explorative Sitzung und hinterlasse deine Spur in der Zukunft von FreeBrain",
+      "cta": "Explorative Sitzung planen"
+    }
+  },
+  "platform": {
+    "title": "Was ist FreeBrain?",
+    "subtitle": "Positiv suchtmachende Bewegungstherapie auf Abruf für dein Gehirn"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Hoppla! Seite nicht gefunden",
+    "returnHome": "Zurück zur Startseite"
+  }
+}

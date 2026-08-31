@@ -1,0 +1,175 @@
+{
+  "header": {
+    "joinCommunity": "Entrar na Comunidade",
+    "getInvolved": "Participe"
+  },
+  "hero": {
+    "presentedBy": "The ProductShift Apresenta",
+    "headlinePre": "Liberte os",
+    "headlineHighlight": "Cérebros",
+    "subheadline": "A startup que permite a qualquer condição neurológica em qualquer lugar viciar-se no movimento que os trata melhor do que apenas comprimidos",
+    "learnMore": "Saber Mais",
+    "joinPilot": "Entrar no Piloto"
+  },
+  "conditions": {
+    "title": "Você é um FreeBrainer?",
+    "statValue": "3,4 bilhões de pessoas globalmente",
+    "statDescription": "(43% da população mundial) vivem com uma condição neurológica que se beneficiaria de terapia de movimento regular",
+    "list": {
+      "migraines": "Enxaquecas",
+      "parkinsons": "Doença de Parkinson",
+      "alzheimers": "Alzheimer",
+      "essentialTremor": "Tremor Essencial",
+      "cognitiveImpairments": "Comprometimentos Cognitivos",
+      "als": "ELA",
+      "cerebrovascular": "Doença Cerebrovascular",
+      "huntingtons": "Doença de Huntington",
+      "ms": "Esclerose Múltipla (EM)",
+      "epilepsy": "Epilepsia",
+      "spinaBifida": "Espinha Bífida",
+      "dystonias": "Distonias",
+      "dementia": "Demência",
+      "cerebralPalsy": "Paralisia Cerebral",
+      "diabeticNeuropathy": "Neuropatia Diabética"
+    }
+  },
+  "onDemand": {
+    "pill": "A Visão",
+    "title": "Terapia sob Demanda",
+    "description": "Seja no seu trajeto ou numa pausa rápida, tire o telefone para uma dose rápida de neuroplasticidade",
+    "features": {
+      "access": "Acesse as melhores terapias em qualquer lugar",
+      "customized": "Personalizado para sua condição e conforto",
+      "habitForming": "Desenhado para criar consistência formadora de hábitos"
+    },
+    "joinPilot": "Entrar no Piloto"
+  },
+  "becomeFreeBrainer": {
+    "pill": "Maneiras de se Mover Conosco",
+    "title": "Torne-se um FreeBrainer",
+    "description": "Junte-se à nossa comunidade, informe a direção da nossa app, teste nosso piloto ou registre sua instalação para nossa próxima oficina",
+    "cards": {
+      "joinCommunity": {
+        "title": "Entrar na Comunidade",
+        "description": "Conecte-se com outros FreeBrainers para se manter inspirado, motivado e ajudar a construir sua plataforma de movimento.",
+        "cta": "Entrar Agora"
+      },
+      "bePartOfResearch": {
+        "title": "Faça Parte da Pesquisa",
+        "description": "Este é o seu app. Faça parte do nosso programa de pesquisa exploratória para informar recursos às suas necessidades.",
+        "cta": "Desenhe seu App"
+      },
+      "appPilot": {
+        "title": "Piloto do App",
+        "description": "Seja o primeiro a testar nosso app de terapia de movimento enquanto ganha vida.",
+        "cta": "Inscrever-se"
+      },
+      "careFacilities": {
+        "title": "Instalações de Cuidado",
+        "description": "Estamos atualmente oferecendo sessões gratuitas em grupo para instalações de cuidado.",
+        "cta": "Veja se a sua se qualifica"
+      }
+    }
+  },
+  "getInvolved": {
+    "title": "Participe",
+    "subtitle": "Nesta fase inicial de crescimento e descoberta, você pode desempenhar um papel importante em nosso desenvolvimento. Veja como:",
+    "cards": {
+      "freeBrainers": {
+        "title": "FreeBrainers",
+        "description": "Junte-se à nossa comunidade de primeiros adotantes. Informe nossa direção, teste nosso piloto ou registre sua instalação para nossa próxima oficina",
+        "cta": "Saber Mais"
+      },
+      "advisors": {
+        "title": "Conselheiros",
+        "description": "Buscamos neurologistas, profissionais de tecnologia e especialistas em movimento para guiar nossa direção clínica e técnica.",
+        "cta": "Candidatar-se como Conselheiro"
+      },
+      "funding": {
+        "title": "Financiamento",
+        "description": "Faça parceria conosco para acelerar nosso crescimento. Buscamos investidores estratégicos alinhados com nossa visão.",
+        "cta": "Informações de Investimento"
+      }
+    }
+  },
+  "evidence": {
+    "title": "Evidência de Apoio",
+    "subtitle": "Explore a pesquisa e os estudos clínicos que formam a base de nossa abordagem de terapia de movimento.",
+    "viewEvidence": "Ver Evidência",
+    "readOn": "Ler em {{source}}",
+    "close": "Fechar",
+    "items": {
+      "1": "Exercício de alta intensidade induz efeitos protetores cerebrais que têm o potencial não apenas de desacelerar, mas possivelmente reverter a neurodegeneração associada à doença de Parkinson, sugere um novo estudo piloto.",
+      "2": "A dança, de fato, tem efeitos tão benéficos no cérebro que agora está sendo usada para tratar pessoas com doença de Parkinson",
+      "3": "O tipo certo de programas de tratamento e reabilitação pode ajudar a promover a neuroplasticidade",
+      "4": "dança terapêutica pode ser benéfica para melhorar o desempenho motor e o equilíbrio em pessoas com DP",
+      "5": "Exercício pode ajudar a preservar e melhorar a função cognitiva e afastar demência, AVC, depressão e ansiedade. Aponte para 150 minutos por semana."
+    },
+    "sources": {
+      "1": "Escola de Medicina de Yale",
+      "2": "NCBI",
+      "3": "NeuLife Rehab",
+      "4": "NCBI",
+      "5": "Clínica Cleveland"
+    }
+  },
+  "socialFeeds": {
+    "title": "Siga-nos",
+    "viewOn": "Ver no {{platform}}",
+    "feeds": {
+      "instagram": {
+        "platform": "Instagram",
+        "caption": "Movimento é remédio. 🧠✨ Siga-nos enquanto inspiramos e exploramos a neuroplasticidade"
+      },
+      "facebook": {
+        "platform": "Facebook",
+        "caption": "Nossa comunidade do Facebook continua crescendo! Hoje compartilhamos histórias inspiradoras de FreeBrainers que viram progressos incríveis."
+      },
+      "tiktok": {
+        "platform": "TikTok",
+        "caption": "Exercício rápido de 60 segundos que você pode fazer em qualquer lugar para estimular suas vias neurológicas! #FreeBrain #Neuroplasticidade #TerapiaDeMovimento"
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Terapia de movimento sob demanda viciante de forma positiva para o seu cérebro",
+    "incubatorLabel": "Confiável por Incubadora de Saúde Inovadora",
+    "copyright": "© {{year}} FreeBrain. Todos os direitos reservados."
+  },
+  "modal": {
+    "cancel": "Cancelar",
+    "joinPilot": {
+      "title": "Entrar no Piloto",
+      "description": "Nosso piloto de app de neuro-terapia virtual está prestes a lançar. Seja um dos primeiros FreeBrainers!",
+      "cta": "Registrar para Piloto"
+    },
+    "advisors": {
+      "title": "Candidatar-se como Conselheiro",
+      "description": "Construímos tecnologia baseada em contribuição humana. Agende uma sessão exploratória virtual e deixe sua marca no futuro do FreeBrain",
+      "cta": "Agendar Sessão Exploratória"
+    },
+    "funding": {
+      "title": "Informações de Investimento",
+      "description": "Estamos em nossa rodada pré-seed e aceitando compromissos virtuais com nossos potenciais investidores estratégicos. \nNossa previsão financeira e prospecto estão disponíveis mediante solicitação.",
+      "cta": "Agendar Sessão Exploratória"
+    },
+    "careFacilities": {
+      "description": "Estamos oferecendo sessões privadas e em grupo especificamente adaptadas a condições neurológicas e instalações de cuidado para idosos. Termos e requisitos se aplicam.",
+      "cta": "Agendar Chamada para Discutir"
+    },
+    "designYourApp": {
+      "title": "Desenhe seu App",
+      "description": "Construímos tecnologia baseada em contribuição humana. Agende uma sessão exploratória virtual e deixe sua marca no futuro do FreeBrain",
+      "cta": "Agendar Sessão Exploratória"
+    }
+  },
+  "platform": {
+    "title": "O que é FreeBrain?",
+    "subtitle": "Terapia de movimento sob demanda viciante de forma positiva para o seu cérebro"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Ops! Página não encontrada",
+    "returnHome": "Voltar ao Início"
+  }
+}

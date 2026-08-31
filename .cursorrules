@@ -1,0 +1,55 @@
+# FreeBrain — Cursor AI Rules
+
+## Project
+FreeBrain (freethebrains.com) — React + TypeScript + Vite + Tailwind CSS + shadcn/ui marketing site for a neuro-therapy platform. Frontend-only. Fully i18n (en, es, de, pt).
+
+## Tech Stack
+- React 18, TypeScript 5, Vite 5, Tailwind CSS 3, shadcn/ui, react-i18next, react-router-dom, lucide-react
+
+## Architecture
+```
+src/
+├── pages/          ← Slim composition layers (routes). Import sections, not logic.
+├── features/       ← Feature-specific sections + hooks (e.g., src/features/home/)
+├── components/
+│   ├── shared/     ← Cross-feature UI components
+│   ├── ui/         ← shadcn primitives (DO NOT MODIFY)
+│   └── layout/     ← Header, Footer
+├── lib/            ← Utilities, constants, helpers
+├── hooks/          ← Global hooks
+├── locales/        ← i18n translations (en, es, de, pt)
+└── types/          ← TypeScript types
+```
+
+## Rules (Non-Negotiable)
+1. **Max 300 lines per file** — split if larger.
+2. **One concern per file.** Pages are slim; they compose sections.
+3. **No cross-feature imports** — use `src/components/shared/` or `src/lib/`.
+4. **No hardcoded colors** — use semantic Tailwind tokens (`bg-background`, `text-foreground`, `bg-primary`, etc.). Colors defined in `src/index.css`.
+5. **No hardcoded user-facing text** — use `t()` from react-i18next. All 4 locale files must stay in sync.
+6. **No dead code, no commented-out blocks, no console.log.**
+7. **No `any` type** — use proper TypeScript types.
+8. **Never break existing functionality** — verify all imports resolve, no props dropped.
+9. **Never define React components inside other components.**
+10. **Never modify `src/components/ui/`** — these are shadcn primitives.
+11. **Name functions as verbs** (`fetchData`), **booleans as questions** (`isLoading`).
+12. **Use early returns** to flatten nested conditionals.
+13. **Refactor instead of stacking fallbacks** — 3rd fallback = stop and refactor.
+14. **Trace the real code path** before making changes.
+
+## i18n
+- 4 languages: en (default), es, de, pt
+- Browser language auto-detected, cached in localStorage
+- Floating LanguageSwitcher component for manual override
+- When adding/changing text: update ALL 4 locale files in `src/locales/{en,es,de,pt}/common.json`
+
+## Design Tokens (src/index.css)
+- `--brand-primary` (#3F3CD5), `--brand-accent` (#DE1261), `--brand-pink` (#FAAFCC)
+- Semantic: `--background`, `--foreground`, `--primary`, `--secondary`, `--success`, `--warning`, `--danger`, `--info`, `--gold`
+
+## Verification
+```bash
+npm run build
+npx tsc --noEmit
+npm run lint
+```

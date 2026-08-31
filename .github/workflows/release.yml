@@ -1,0 +1,37 @@
+name: Release
+
+# Triggers when you create a GitHub release tag (v1.0.0, v2.1.3, etc.)
+# GitHub automatically runs CI (ci.yml) on the tagged commit first.
+# This workflow simply builds and uploads the artifact as a rollback point.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build & Upload Artifact
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Upload dist as release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebrain-dist-${{ github.ref_name }}
+          path: dist/
+          retention-days: 90

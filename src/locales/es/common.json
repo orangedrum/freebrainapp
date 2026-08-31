@@ -1,0 +1,175 @@
+{
+  "header": {
+    "joinCommunity": "Únete a la Comunidad",
+    "getInvolved": "Participa"
+  },
+  "hero": {
+    "presentedBy": "The ProductShift Presenta",
+    "headlinePre": "Libera los",
+    "headlineHighlight": "Cerebros",
+    "subheadline": "La startup que permite a cualquier persona con una condición neurológica en cualquier lugar adictarse al movimiento que los trata mejor que las pastillas solas",
+    "learnMore": "Saber Más",
+    "joinPilot": "Únete al Piloto"
+  },
+  "conditions": {
+    "title": "¿Eres un FreeBrainer?",
+    "statValue": "3.4 mil millones de personas en el mundo",
+    "statDescription": "(43% de la población mundial) viven con una condición neurológica que se beneficiaría de la terapia de movimiento regular",
+    "list": {
+      "migraines": "Migrañas",
+      "parkinsons": "Enfermedad de Parkinson",
+      "alzheimers": "Alzheimer",
+      "essentialTremor": "Temblor Esencial",
+      "cognitiveImpairments": "Deterioro Cognitivo",
+      "als": "ELA",
+      "cerebrovascular": "Enfermedad Cerebrovascular",
+      "huntingtons": "Enfermedad de Huntington",
+      "ms": "Esclerosis Múltiple (EM)",
+      "epilepsy": "Epilepsia",
+      "spinaBifida": "Espina Bífida",
+      "dystonias": "Distonías",
+      "dementia": "Demencia",
+      "cerebralPalsy": "Parálisis Cerebral",
+      "diabeticNeuropathy": "Neuropatía Diabética"
+    }
+  },
+  "onDemand": {
+    "pill": "La Visión",
+    "title": "Terapia bajo Demanda",
+    "description": "Ya sea en tu viaje o en un rápido descanso, saca tu teléfono para una dosis rápida de neuroplasticidad",
+    "features": {
+      "access": "Accede a las mejores terapias sobre la marcha",
+      "customized": "Personalizado para tu condición y comodidad",
+      "habitForming": "Diseñado para crear consistencia formadora de hábitos"
+    },
+    "joinPilot": "Únete al Piloto"
+  },
+  "becomeFreeBrainer": {
+    "pill": "Formas de Moverte con Nosotros",
+    "title": "Conviértete en FreeBrainer",
+    "description": "Únete a nuestra comunidad, informa la dirección de nuestra app, prueba nuestro piloto, o registra tu instalación para nuestro próximo taller",
+    "cards": {
+      "joinCommunity": {
+        "title": "Únete a la Comunidad",
+        "description": "Conecta con otros FreeBrainers para mantenerte inspirado, motivado y ayudar a construir tu plataforma de movimiento.",
+        "cta": "Únete Ahora"
+      },
+      "bePartOfResearch": {
+        "title": "Sé Parte de la Investigación",
+        "description": "Esta es tu app. Sé parte de nuestro programa de investigación exploratoria para informar funciones según tus necesidades.",
+        "cta": "Diseña tu App"
+      },
+      "appPilot": {
+        "title": "Piloto de App",
+        "description": "Sé el primero en probar nuestra app de terapia de movimiento mientras cobra vida.",
+        "cta": "Regístrate"
+      },
+      "careFacilities": {
+        "title": "Centros de Cuidado",
+        "description": "Actualmente ofrecemos sesiones grupales gratuitas para centros de cuidado.",
+        "cta": "Mira si el tuyo califica"
+      }
+    }
+  },
+  "getInvolved": {
+    "title": "Participa",
+    "subtitle": "En esta etapa temprana de crecimiento y descubrimiento, puedes jugar un papel importante en nuestro desarrollo. Así es como:",
+    "cards": {
+      "freeBrainers": {
+        "title": "FreeBrainers",
+        "description": "Únete a nuestra comunidad de adoptadores tempranos. Informa nuestra dirección, prueba nuestro piloto, o registra tu instalación para nuestro próximo taller",
+        "cta": "Saber Más"
+      },
+      "advisors": {
+        "title": "Asesores",
+        "description": "Buscamos neurólogos, profesionales tecnológicos y especialistas en movimiento para guiar nuestra dirección clínica y técnica.",
+        "cta": "Aplica para Asesorar"
+      },
+      "funding": {
+        "title": "Financiamiento",
+        "description": "Asóciate con nosotros para acelerar nuestro crecimiento. Buscamos inversores estratégicos alineados con nuestra visión.",
+        "cta": "Información de Inversión"
+      }
+    }
+  },
+  "evidence": {
+    "title": "Evidencia de Apoyo",
+    "subtitle": "Explora la investigación y los estudios clínicos que forman la base de nuestro enfoque de terapia de movimiento.",
+    "viewEvidence": "Ver Evidencia",
+    "readOn": "Leer en {{source}}",
+    "close": "Cerrar",
+    "items": {
+      "1": "El ejercicio de alta intensidad induce efectos protectores cerebrales que tienen el potencial no solo de ralentizar, sino posiblemente revertir la neurodegeneración asociada con la enfermedad de Parkinson, sugiere un nuevo estudio piloto.",
+      "2": "La danza, de hecho, tiene efectos tan beneficiosos en el cerebro que ahora se está utilizando para tratar a personas con la enfermedad de Parkinson",
+      "3": "El tipo correcto de programas de tratamiento y rehabilitación puede ayudar a promover la neuroplasticidad",
+      "4": "la danza terapéutica puede ser beneficiosa para mejorar el rendimiento motor y el equilibrio en personas con EP",
+      "5": "El ejercicio puede ayudar a preservar y mejorar la función cognitiva y prevenir la demencia, el accidente cerebrovascular, la depresión y la ansiedad. Apunta a 150 minutos por semana."
+    },
+    "sources": {
+      "1": "Escuela de Medicina de Yale",
+      "2": "NCBI",
+      "3": "NeuLife Rehab",
+      "4": "NCBI",
+      "5": "Clínica Cleveland"
+    }
+  },
+  "socialFeeds": {
+    "title": "Síguenos",
+    "viewOn": "Ver en {{platform}}",
+    "feeds": {
+      "instagram": {
+        "platform": "Instagram",
+        "caption": "El movimiento es medicina. 🧠✨ Síguenos mientras inspiramos y exploramos la neuroplasticidad"
+      },
+      "facebook": {
+        "platform": "Facebook",
+        "caption": "¡Nuestra comunidad de Facebook sigue creciendo! Hoy compartimos historias inspiradoras de FreeBrainers que han visto un progreso increíble."
+      },
+      "tiktok": {
+        "platform": "TikTok",
+        "caption": "¡Rápido ejercicio de 60 segundos que puedes hacer en cualquier lugar para estimular tus vías neurológicas! #FreeBrain #Neuroplasticidad #TerapiaDeMovimiento"
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Terapia de movimiento bajo demanda positivamente adictiva para tu cerebro",
+    "incubatorLabel": "Respaldado por Incubadora de Salud Innovadora",
+    "copyright": "© {{year}} FreeBrain. Todos los derechos reservados."
+  },
+  "modal": {
+    "cancel": "Cancelar",
+    "joinPilot": {
+      "title": "Únete al Piloto",
+      "description": "¡Nuestro piloto de app de neuro-terapia virtual está a punto de lanzarse. Sé uno de los primeros FreeBrainers!",
+      "cta": "Regístrate para el Piloto"
+    },
+    "advisors": {
+      "title": "Aplica para Asesorar",
+      "description": "Construimos tecnología basada en aportes humanos. Programa una sesión exploratoria virtual y deja tu huella en el futuro de FreeBrain",
+      "cta": "Agendar Sesión Exploratoria"
+    },
+    "funding": {
+      "title": "Información de Inversión",
+      "description": "Estamos en nuestra ronda pre-semilla y aceptando citas virtuales con nuestros inversores estratégicos potenciales. \nNuestro pronóstico financiero y prospecto están disponibles bajo solicitud.",
+      "cta": "Agendar Sesión Exploratoria"
+    },
+    "careFacilities": {
+      "description": "Ofrecemos sesiones privadas y grupales específicamente adaptadas a condiciones neurológicas y centros de cuidado para adultos mayores. Términos y requisitos aplican.",
+      "cta": "Agendar Llamada para Discutir"
+    },
+    "designYourApp": {
+      "title": "Diseña tu App",
+      "description": "Construimos tecnología basada en aportes humanos. Programa una sesión exploratoria virtual y deja tu huella en el futuro de FreeBrain",
+      "cta": "Agendar Sesión Exploratoria"
+    }
+  },
+  "platform": {
+    "title": "¿Qué es FreeBrain?",
+    "subtitle": "Terapia de movimiento bajo demanda positivamente adictiva para tu cerebro"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "¡Ups! Página no encontrada",
+    "returnHome": "Volver al Inicio"
+  }
+}

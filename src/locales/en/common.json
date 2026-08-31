@@ -1,0 +1,175 @@
+{
+  "header": {
+    "joinCommunity": "Join Community",
+    "getInvolved": "Get Involved"
+  },
+  "hero": {
+    "presentedBy": "The ProductShift Presents",
+    "headlinePre": "Free The",
+    "headlineHighlight": "Brains",
+    "subheadline": "The startup enabling any neuro condition anywhere to get addicted to the movement that treats them better than pills alone",
+    "learnMore": "Learn More",
+    "joinPilot": "Join Pilot"
+  },
+  "conditions": {
+    "title": "Are you a FreeBrainer?",
+    "statValue": "3.4 billion people globally",
+    "statDescription": "(43% of the world's population) are living with a neurological condition that would benefit from regular movement therapy",
+    "list": {
+      "migraines": "Migraines",
+      "parkinsons": "Parkinson's Disease",
+      "alzheimers": "Alzheimer's",
+      "essentialTremor": "Essential Tremor",
+      "cognitiveImpairments": "Cognitive Impairments",
+      "als": "ALS",
+      "cerebrovascular": "Cerebrovascular Disease",
+      "huntingtons": "Huntington's Disease",
+      "ms": "Multiple Sclerosis (MS)",
+      "epilepsy": "Epilepsy",
+      "spinaBifida": "Spina Bifida",
+      "dystonias": "Dystonias",
+      "dementia": "Dementia",
+      "cerebralPalsy": "Cerebral Palsy",
+      "diabeticNeuropathy": "Diabetic Neuropathy"
+    }
+  },
+  "onDemand": {
+    "pill": "The Vision",
+    "title": "On-demand Therapy",
+    "description": "Whether on your commute or a quick bathroom break, pull out your phone for a quick dose of neuroplasticity",
+    "features": {
+      "access": "Access the best therapies on-the-go",
+      "customized": "Customized to your condition & comfort",
+      "habitForming": "Designed to build habit-forming consistency"
+    },
+    "joinPilot": "Join Pilot"
+  },
+  "becomeFreeBrainer": {
+    "pill": "Ways To Move With Us",
+    "title": "Become a FreeBrainer",
+    "description": "Join our community, inform our app's direction, try our pilot, or register your facility for our next workshop",
+    "cards": {
+      "joinCommunity": {
+        "title": "Join Community",
+        "description": "Connect with other FreeBrainers to stay inspired, get motivated, and help build your movement platform.",
+        "cta": "Join Now"
+      },
+      "bePartOfResearch": {
+        "title": "Be Part of Research",
+        "description": "This is your app. Be a part of our exploratory research program to inform features to your needs.",
+        "cta": "Design Your App"
+      },
+      "appPilot": {
+        "title": "App Pilot",
+        "description": "Be first to test our movement therapy app as it comes to life.",
+        "cta": "Sign Up"
+      },
+      "careFacilities": {
+        "title": "Care Facilities",
+        "description": "We're currently offering free group sessions to care facilities.",
+        "cta": "See if yours qualifies"
+      }
+    }
+  },
+  "getInvolved": {
+    "title": "Get Involved",
+    "subtitle": "In this early stage of growth & discovery, you can play a major role in our development. Here's how:",
+    "cards": {
+      "freeBrainers": {
+        "title": "FreeBrainers",
+        "description": "Join our community of early adopters. Inform our direction, try our pilot, or sign your facility up for our next workshop",
+        "cta": "Learn More"
+      },
+      "advisors": {
+        "title": "Advisors",
+        "description": "We seek neurologists, tech professionals, and movement specialists to guide our clinical and technical direction.",
+        "cta": "Apply to Advise"
+      },
+      "funding": {
+        "title": "Funding",
+        "description": "Partner with us to accelerate our growth. We are looking for strategic investors aligned with our vision.",
+        "cta": "Investment Info"
+      }
+    }
+  },
+  "evidence": {
+    "title": "Supporting Evidence",
+    "subtitle": "Explore the research and clinical studies that form the foundation of our movement therapy approach.",
+    "viewEvidence": "View Evidence",
+    "readOn": "Read on {{source}}",
+    "close": "Close",
+    "items": {
+      "1": "High-intensity exercise induces brain-protective effects that have the potential to not just slow down, but possibly reverse, the neurodegeneration associated with Parkinson's disease, a new pilot study suggests.",
+      "2": "Dance, in fact, has such beneficial effects on the brain that it is now being used to treat people with Parkinson's disease",
+      "3": "The right kind of treatment and rehabilitation programs can help promote neuroplasticity",
+      "4": "therapeutic dancing can be beneficial for improving motor performance and balance in people with PD",
+      "5": "Exercise can help preserve and improve cognitive function and fend off dementia, stroke, depression and anxiety. Aim for 150 minutes per week."
+    },
+    "sources": {
+      "1": "Yale School of Medicine",
+      "2": "NCBI",
+      "3": "NeuLife Rehab",
+      "4": "NCBI",
+      "5": "Cleveland Clinic"
+    }
+  },
+  "socialFeeds": {
+    "title": "Follow Us",
+    "viewOn": "View on {{platform}}",
+    "feeds": {
+      "instagram": {
+        "platform": "Instagram",
+        "caption": "Movement is medicine. 🧠✨ Follow us as we inspire, explore neuroplasticity"
+      },
+      "facebook": {
+        "platform": "Facebook",
+        "caption": "Our facebook community continues to grow! Today we're sharing inspiring stories from FreeBrainers who have seen incredible progress."
+      },
+      "tiktok": {
+        "platform": "TikTok",
+        "caption": "Quick 60-second exercise you can do anywhere to stimulate your neuro-pathways! #FreeBrain #Neuroplasticity #MovementTherapy"
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Positively addicting on-demand movement therapy for your brain",
+    "incubatorLabel": "Trusted by Innovative Health Incubator",
+    "copyright": "© {{year}} FreeBrain. All rights reserved."
+  },
+  "modal": {
+    "cancel": "Cancel",
+    "joinPilot": {
+      "title": "Join Pilot",
+      "description": "Our virtual neuro-therapy app pilot is about to launch. Come be one of the first FreeBrainers!",
+      "cta": "Register for Pilot"
+    },
+    "advisors": {
+      "title": "Apply to Advise",
+      "description": "We build tech based on human-input. Schedule a virtual exploratory session and make your mark on the future of FreeBrain",
+      "cta": "Schedule Exploratory Session"
+    },
+    "funding": {
+      "title": "Investment Info",
+      "description": "We're in our pre-seed round and accepting virtual appointments with our potential strategic investors. \nOur financial forecast & prospectus are available upon request.",
+      "cta": "Schedule Exploratory Session"
+    },
+    "careFacilities": {
+      "description": "We're offering private & group sessions specifically tailored to neuro-conditions & senior care facilities. Terms & requirements apply.",
+      "cta": "Schedule Call to Discuss More"
+    },
+    "designYourApp": {
+      "title": "Design Your App",
+      "description": "We build tech based on human-input. Schedule a virtual exploratory session and make your mark on the future of FreeBrain",
+      "cta": "Schedule Exploratory Session"
+    }
+  },
+  "platform": {
+    "title": "What Is FreeBrain?",
+    "subtitle": "Positively addicting on-demand movement therapy for your brain"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Oops! Page not found",
+    "returnHome": "Return to Home"
+  }
+}
