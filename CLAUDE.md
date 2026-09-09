@@ -1,184 +1,25 @@
-# FreeBrain — AI Coding Rules & Architecture Guide
+# FreeBrain — AI Coding Rules
 
-> **Read this before making ANY change.** Every rule below is non-negotiable.
-> These rules apply to Claude, Cursor, Copilot, and any other AI coding tool.
+> **Read `AGENTS.md` first — it is the single source of truth for all coding rules.**
+> This file only summarizes the current project so context loads fast.
 
----
+## Project
 
-## Project Overview
+FreeBrain (app.freethebrains.com) is a **PWA movement-therapy platform**, not just a marketing site. React 18 + TypeScript 5 + Vite 7 + Tailwind CSS 3 + shadcn/ui + react-i18next + react-router-dom + **Supabase** (auth, Postgres + RLS). Vite PWA runs in silent `autoUpdate` mode (no user-facing update prompts).
 
-FreeBrain (freethebrains.com) is a React + TypeScript + Vite + Tailwind CSS + shadcn/ui marketing site for a neuro-therapy platform. It is fully internationalized (English, Spanish, German, Portuguese) with browser language auto-detection. The site is frontend-only — no backend code runs.
+Roles: **FreeBrainer**, **BrainLover** (caregiver), **Pro** (facility), plus an app **Admin**. i18n in **5 languages**: en, de, es, fr, pt.
 
-### Tech Stack
-- **React 18** + **TypeScript 5**
-- **Vite 5** (build tool)
-- **Tailwind CSS 3** (styling)
-- **shadcn/ui** (component primitives — DO NOT modify `src/components/ui/`)
-- **react-i18next** (i18n — 4 languages)
-- **react-router-dom** (routing)
-- **lucide-react** (icons)
+## Quick Rules
 
----
+1. **Max 300 lines per file.** One concern per file. Pages are slim composition layers.
+2. Feature code lives in `src/features/<role>/` — `freebrainer`, `brainlover`, `checkin`, `community`, `pro`, `onboarding`, `profile`, `sessions`, `shared`.
+3. **No cross-feature imports** — route through `src/components/shared/` or `src/lib/` (enforced by `node scripts/check-architecture.js`).
+4. **No hardcoded colors** — use semantic tokens (`bg-background`, `text-foreground`, `text-primary`, `bg-success`, ...) defined in `src/index.css`.
+5. **No hardcoded user-facing text** — use `t()` from react-i18next; add keys to **ALL 5** locale files `src/locales/{en,de,es,fr,pt}.json`.
+6. **No dead code, no commented-out blocks, no `console.log`** (use `console.warn` with `[FB-DEBUG]` prefix for debugging).
+7. **No `any` type.** Before refactoring, verify all imports resolve and no props are dropped — never regress existing functionality.
+8. **Never modify `src/components/ui/`** — shadcn primitives.
+9. **One code path for dev-bypass and real users** — branch only via the Supabase client swap in `src/lib/supabase.ts`, never with `isDevBypassUser()` inside data hooks.
+10. **Customize role UI via props, never by duplicating components.**
 
-## Architecture Rules (Non-Negotiable)
-
-### Modular Structure
-```
-src/
-├── pages/          ← Slim composition layers (routes). Import sections, not logic.
-├── features/       ← Feature-specific sections + hooks
-│   └── home/       ← Home page sections (Hero, Footer sections, etc.)
-├── components/
-│   ├── shared/     ← Cross-feature UI components (modals, cards, etc.)
-│   ├── ui/         ← UI primitives (DO NOT modify)
-│   └── layout/     ← Layout, Header, Footer
-├── lib/            ← Utilities, constants, helpers
-├── hooks/          ← Global hooks
-├── locales/        ← i18n translation files
-│   ├── en/common.json
-│   ├── es/common.json
-│   ├── de/common.json
-│   └── pt/common.json
-└── types/          ← TypeScript type definitions
-```
-
-### File Size & Organization
-- **Max 300 lines per file.** Split if larger.
-- **One concern per file.**
-- **Pages are slim** — they import and compose sections, they do NOT contain business logic.
-- **Sections live in `src/features/<feature>/`** (e.g., `src/features/home/HeroSection.tsx`).
-- **Shared components live in `src/components/shared/`**.
-- **Cross-feature imports must go through `src/components/shared/` or `src/lib/`** — never import directly from another feature folder.
-
-### Clean Code
-- **Meaningful, descriptive names.** No abbreviations unless widely understood.
-- **No dead code.** No commented-out blocks. Remove unused imports and variables.
-- **No `console.log`** in production code.
-- **No `any` type** — always use proper TypeScript types.
-
-### Human-Readable
-- Code should read like prose. Prefer clarity over cleverness.
-- Use **early returns** to flatten nested conditionals.
-- Name functions as **verbs** (`fetchCheckIns`, `submitCheckIn`).
-- Name booleans as **questions** (`hasCheckedIn`, `isLoading`).
-
-### Non-Redundant
-- **Never duplicate logic.** If a component or hook already exists, reuse it.
-- Before creating any file, check if similar logic already exists.
-- If two files do similar things, extract shared logic into a third file and have both import it.
-
-### Never Regressive
-- **Never break existing functionality** when refactoring.
-- If refactoring, verify all import paths resolve and no props are dropped.
-- If renaming a file, update ALL imports that reference it.
-- Never remove a prop from a component without checking all call sites.
-
-### Role-Specific Customization via Props, Not Branches
-- Never duplicate a component for a different role/user type.
-- Customize per-role behavior via props (e.g., `perspective: "self" | "proxy"`).
-- Gate role-specific steps at the page/orchestrator level, not inside step components.
-
----
-
-## Design System Rules
-
-### Colors — CSS Custom Properties Only
-- **NEVER hardcode colors** (`text-white`, `bg-blue-500`, `#hex`, `rgb()`).
-- All colors are defined as CSS custom properties in `src/index.css`.
-- Use semantic Tailwind classes that reference tokens: `bg-background`, `text-foreground`, `bg-primary`, `bg-secondary`, `bg-success`, `bg-warning`, `bg-danger`, `bg-info`, `bg-gold`.
-- Brand tokens: `--brand-primary`, `--brand-accent` (#DE1261), `--brand-pink` (#FAAFCC).
-
-### Fonts
-- Fonts are configured in `tailwind.config.ts`, not inline in components.
-
-### Layout
-- Use `container` with `mx-auto px-4 md:px-6` for page-level sections.
-- Section spacing: `py-20 md:py-32` for major sections.
-- Max width: `max-w-4xl` (896px) for focused content sections.
-
----
-
-## i18n Rules — All 4 Languages Required
-
-### Translation Function
-- **Every user-facing string** must use the `t()` function from `react-i18next`.
-- Never hardcode user-facing text in components.
-- Translation files live in `src/locales/{en,es,de,pt}/common.json`.
-
-### When Adding or Changing Text
-1. Add the key to `src/locales/en/common.json` first.
-2. Add the same key to `es`, `de`, and `pt` common.json files.
-3. Use the key in the component via `t("section.key")`.
-4. **All 4 language files must stay in sync** — never update one without the others.
-
-### Supported Languages
-- `en` — English (default/fallback)
-- `es` — Spanish
-- `de` — German
-- `pt` — Portuguese
-
-### Language Detection
-- Browser language is auto-detected via `i18next-browser-languagedetector`.
-- Detection order: `navigator` → `htmlTag` → `localStorage`.
-- User choice is cached in `localStorage` under `i18nextLng`.
-- The floating `LanguageSwitcher` component lets users override the detected language.
-
----
-
-## Never-Do List
-
-- ❌ Hardcode colors (`text-white`, `bg-blue-500`, `#hex`)
-- ❌ Hardcode user-facing text strings (use `t()` translation function)
-- ❌ Duplicate a component or hook that already exists
-- ❌ Create a file over 300 lines without splitting
-- ❌ Import from one feature folder into another (use `shared/` or `lib/`)
-- ❌ Duplicate a component for a different role — parameterize with props instead
-- ❌ Comment out code instead of deleting it
-- ❌ Break existing functionality during refactoring
-- ❌ Define React components inside other component functions
-- ❌ Import a component file that doesn't exist yet
-- ❌ Use `console.log` in production code
-- ❌ Use `any` type — always use proper TypeScript types
-- ❌ Modify files in `src/components/ui/` — these are shadcn primitives
-
----
-
-## Trace Before Touching
-- Before making any change, **trace the actual code path** a real user hits.
-- If there are dev/preview vs production code paths, fix BOTH together — never just one.
-
-## Refactor Instead of Stacking Fallbacks
-- If adding a 3rd fallback to the same function, **stop and refactor** instead.
-- Identify the single source of truth for each piece of data.
-- Centralize shared logic into a single utility function and have ALL callers use it.
-
----
-
-## Key Files Reference
-
-| File | Purpose |
-|------|---------|
-| `src/pages/Index.tsx` | Home page — slim composition of all sections |
-| `src/i18n.ts` | i18next initialization + language detection |
-| `src/index.css` | Design tokens (colors, spacing, fonts) |
-| `tailwind.config.ts` | Tailwind theme config (fonts, colors, animations) |
-| `src/lib/constants.ts` | Shared constants (links, social URLs, etc.) |
-| `src/lib/navigation.ts` | Navigation structure |
-| `src/hooks/useModalState.ts` | Modal open/close state management |
-| `src/components/shared/Modal.tsx` | Reusable modal dialog |
-| `src/components/shared/GridBackground.tsx` | Grid pattern background |
-| `src/components/shared/LanguageSwitcher.tsx` | Floating language switcher |
-| `src/components/shared/ErrorBoundary.tsx` | Error boundary for crash protection |
-
----
-
-## Verification Checklist (Before Committing)
-
-1. `npm run build` passes with no errors
-2. `npx tsc --noEmit` passes with no type errors
-3. All 4 locale files (`en`, `es`, `de`, `pt`) are in sync
-4. No hardcoded colors or user-facing strings
-5. No file exceeds 300 lines
-6. No imports from one feature folder into another
-7. No new `console.log` statements
-8. All imports resolve correctly
+Full rules, architecture, dev-bypass pattern, i18n, PWA strategy and the check-in flow state machine: **see `AGENTS.md`.**

@@ -116,6 +116,7 @@ src/
 - Cross-feature imports must go through `src/components/shared/` or `src/lib/` — never import directly from another feature folder.
 - **Architecture is enforced in CI** via `scripts/check-architecture.js` — a zero-dependency script that detects cross-feature imports and circular dependencies. See `docs/architecture-check.md` for details.
 - To run locally: `node scripts/check-architecture.js`
+- **Feature docs are auto-generated.** Run `npm run docs:generate` (wraps `scripts/generate-docs.js`) before each release to regenerate `FEATURES.md`. **Never hand-edit `FEATURES.md`** — edit page/feature JSDoc instead, then regenerate.
 
 ---
 
