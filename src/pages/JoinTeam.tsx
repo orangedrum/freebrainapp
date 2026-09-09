@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase, safeSupabaseQuery } from "@/lib/supabase";
 import { fetchInviteContextByEmail } from "@/lib/brainloverInvites";
+import { computeInviteIntent, intentToParams, type InviteKind } from "@/lib/inviteRouting";
+import { getDefaultRouteForRole } from "@/components/auth/RoleGuards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -10,15 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 export default function JoinTeam() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { session, user, isLoading } = useAuth();
+  const { session, user, isLoading, userRole } = useAuth();
   const { toast } = useToast();
   
   const teamId = searchParams.get("team_id");
   const caregiverId = searchParams.get("caregiver_id");
   const patientId = searchParams.get("patient_id");
-  const role = searchParams.get("role");
   const fbName = searchParams.get("fb_name");
   const inviterName = searchParams.get("inviter_name");
+  const kind = searchParams.get("kind") as InviteKind | null;
   
   const [isProcessing, setIsProcessing] = useState(true);
 
@@ -33,7 +35,6 @@ export default function JoinTeam() {
       let effectiveCaregiverId = caregiverId;
       let effectiveFbName = fbName;
       let effectiveInviterName = inviterName;
-      let effectiveRole = role;
 
       // 1. Check session user_metadata (set via signInWithOtp options.data — survives magic link redirect)
       const meta = (session?.user as any)?.user_metadata || (user as any)?.user_metadata;
@@ -42,7 +43,6 @@ export default function JoinTeam() {
         effectiveCaregiverId = effectiveCaregiverId || meta.fb_invite_caregiver_id;
         effectiveFbName = effectiveFbName || meta.fb_invite_patient_name;
         effectiveInviterName = effectiveInviterName || meta.fb_invite_inviter_name;
-        effectiveRole = effectiveRole || meta.fb_invite_role;
         console.log("[FB-DEBUG] JoinTeam: recovered invite context from user_metadata:", meta);
       }
 
@@ -58,7 +58,6 @@ export default function JoinTeam() {
           effectiveCaregiverId = effectiveCaregiverId || ctx.caregiverId;
           effectiveFbName = effectiveFbName || ctx.patientName;
           effectiveInviterName = effectiveInviterName || ctx.inviterName;
-          effectiveRole = effectiveRole || ctx.role;
           console.log("[FB-DEBUG] JoinTeam: recovered invite context from localStorage:", ctx);
         } catch (e) { /* ignore */ }
       }
@@ -88,7 +87,6 @@ export default function JoinTeam() {
           effectiveFbName = effectiveFbName || ctx.patientName;
           // Always overwrite inviterName from Supabase — it's the most reliable source
           effectiveInviterName = ctx.inviterName || effectiveInviterName;
-          effectiveRole = effectiveRole || ctx.role;
           console.log("[FB-DEBUG] JoinTeam: recovered invite context from Supabase:", ctx);
         }
       }
@@ -130,20 +128,22 @@ export default function JoinTeam() {
       }
 
       // If no session, redirect to onboarding with the invite params preserved
+      const intent = computeInviteIntent({
+        teamId,
+        patientId: effectivePatientId,
+        caregiverId: effectiveCaregiverId,
+        fbName: effectiveFbName,
+        inviterName: effectiveInviterName,
+        kind,
+      });
+
       if (!user) {
-        const params = new URLSearchParams();
-        params.set("flow", effectiveRole === "caregiver" ? "brainlover" : "freebrainer");
-        params.set("step", "2");
-        if (teamId) params.set("team_id", teamId);
-        if (effectivePatientId) params.set("patient_id", effectivePatientId);
-        if (effectiveCaregiverId) params.set("caregiver_id", effectiveCaregiverId);
-        if (effectiveFbName) params.set("fb_name", effectiveFbName);
-        if (effectiveInviterName) params.set("inviter_name", effectiveInviterName);
-        navigate(`/onboarding?${params.toString()}`);
+        navigate(`/onboarding?${intentToParams(intent)}`);
         return;
       }
 
-      // ── Logged in: link the new BrainLover to the FreeBrainer ──
+      // ── Logged in: link + join the team, then route the invitee to the
+      //    onboarding that matches the intent — never a bare dashboard. ──
       try {
         const { data: userProfile } = await supabase
           .from('profiles')
@@ -151,165 +151,145 @@ export default function JoinTeam() {
           .or(`user_id.eq.${user.id},id.eq.${user.id}`)
           .maybeSingle();
 
-        const isOnboarded = (userProfile as any)?.onboarding_completed === true;
-        
-        // When role === 'caregiver', the INVITEE (user.id) is the new BrainLover
-        // being linked to the FreeBrainer. effectiveCaregiverId from the URL is the
-        // INVITING BrainLover — used only as a reference, not as the link owner.
-        const newCaregiverId = effectiveRole === 'caregiver' ? user.id : (effectiveCaregiverId || null);
-        const newPatientId = effectivePatientId || (effectiveRole === 'freebrainer' ? user.id : null);
+        const isOnboarded = userProfile?.onboarding_completed === true;
 
-        // ── Guard: if newPatientId is still a dev-patient ID, don't attempt a
-        //    Supabase insert (it will crash with "invalid input syntax for type uuid").
-        //    Redirect to onboarding where handleCompleteBrainLover will resolve it
-        //    from the Supabase brainlover_invites table.
-        if (newPatientId && newPatientId.startsWith("dev-patient-")) {
+        const joinTeam = async () => {
+          if (!intent.teamId) return;
+          try {
+            localStorage.setItem(`user_team_${user.id}`, JSON.stringify({
+              team_id: intent.teamId,
+              user_id: user.id
+            }));
+            const { data: existingTeam } = await safeSupabaseQuery(() =>
+              (supabase.from('team_members') as any)
+                .select('id')
+                .eq('team_id', intent.teamId)
+                .eq('user_id', user.id)
+                .maybeSingle()
+            );
+            if (!existingTeam) {
+              await safeSupabaseQuery(() =>
+                (supabase.from('team_members') as any)
+                  .insert({ team_id: intent.teamId, user_id: user.id })
+              );
+            }
+          } catch (e) {
+            console.log("[FB-DEBUG] JoinTeam: team insertion skipped", e);
+          }
+        };
+
+        const cacheLink = (caregiverUid: string, patientUid: string) => {
+          const cached = JSON.parse(localStorage.getItem(`dev_caregiver_links_${caregiverUid}`) || '[]');
+          if (!cached.some((item: { patient_id: string }) => item.patient_id === patientUid)) {
+            cached.push({ patient_id: patientUid, profiles: { display_name: "FreeBrainer", deletion_scheduled_at: null } });
+            localStorage.setItem(`dev_caregiver_links_${caregiverUid}`, JSON.stringify(cached));
+          }
+        };
+
+        // ── Guard: if the patient ID is still a dev-patient ID, don't attempt a
+        //    Supabase insert (it would crash with "invalid input syntax for type uuid").
+        //    Redirect to onboarding where handleCompleteBrainLover resolves it from
+        //    the Supabase brainlover_invites table.
+        if (intent.patientId && intent.patientId.startsWith("dev-patient-")) {
           console.warn("[FB-DEBUG] JoinTeam: patient ID is still dev-patient, redirecting to onboarding for resolution");
-          const params = new URLSearchParams();
-          params.set("flow", "brainlover");
-          params.set("step", "2");
-          params.set("patient_id", newPatientId);
-          if (teamId) params.set("team_id", teamId);
-          if (effectiveRole) params.set("role", effectiveRole);
-          if (effectiveFbName) params.set("fb_name", effectiveFbName);
-          if (effectiveInviterName) params.set("inviter_name", effectiveInviterName);
-          navigate(`/onboarding?${params.toString()}`);
+          navigate(`/onboarding?${intentToParams(intent)}`);
           return;
         }
 
-        if (newPatientId && newCaregiverId) {
+        if (intent.kind === "support_existing_fb" && intent.patientId) {
+          // The INVITEE is a new BrainLover caring for an EXISTING FreeBrainer.
+          const caregiverUid = user.id;
+          const patientUid = intent.patientId;
           try {
             const { data: existingLink } = await supabase
               .from('caregiver_links')
               .select('id')
-              .eq('caregiver_id', newCaregiverId)
-              .eq('patient_id', newPatientId)
+              .eq('caregiver_id', caregiverUid)
+              .eq('patient_id', patientUid)
               .maybeSingle();
-
             if (!existingLink) {
               const { error: linkErr } = await (supabase
                 .from('caregiver_links') as any)
-                .insert({
-                  caregiver_id: newCaregiverId,
-                  patient_id: newPatientId
-                });
+                .insert({ caregiver_id: caregiverUid, patient_id: patientUid });
               if (linkErr) {
                 console.error("[FB-DEBUG] JoinTeam: caregiver_links insert failed:", linkErr.message);
                 throw new Error(`Failed to link: ${linkErr.message}`);
               }
-              console.log("[FB-DEBUG] JoinTeam: caregiver_links insert succeeded for patient:", newPatientId);
+              console.log("[FB-DEBUG] JoinTeam: caregiver_links insert succeeded for patient:", patientUid);
             }
-            // Auto-team integration
             const { ensureSameTeam } = await import("@/features/shared/useSubAccountCreate");
-            await ensureSameTeam(newCaregiverId, newPatientId);
+            await ensureSameTeam(caregiverUid, patientUid);
           } catch (e) {
             console.warn("Caregiver link Supabase insert failed, caching locally", e);
           }
-
-          const newLinkObj = {
-            patient_id: newPatientId,
-            profiles: { display_name: "FreeBrainer", deletion_scheduled_at: null }
-          };
-          const cached = JSON.parse(localStorage.getItem(`dev_caregiver_links_${newCaregiverId}`) || '[]');
-          if (!cached.some((item: any) => item.patient_id === newPatientId)) {
-            cached.push(newLinkObj);
-            localStorage.setItem(`dev_caregiver_links_${newCaregiverId}`, JSON.stringify(cached));
-          }
+          cacheLink(caregiverUid, patientUid);
+          await joinTeam();
 
           toast({
             title: "Successfully Connected!",
             description: "Accounts have been successfully linked.",
           });
-          
           sessionStorage.removeItem('pendingInvite');
-          
+
           if (isOnboarded) {
             navigate("/caregiver");
           } else {
-            const params = new URLSearchParams();
-            params.set("flow", "brainlover");
-            params.set("step", "2");
-            params.set("patient_id", newPatientId);
-            if (teamId) params.set("team_id", teamId);
-            if (effectiveRole) params.set("role", effectiveRole);
-            if (effectiveFbName) params.set("fb_name", effectiveFbName);
-            if (effectiveInviterName) params.set("inviter_name", effectiveInviterName);
-            navigate(`/onboarding?${params.toString()}`);
+            navigate(`/onboarding?${intentToParams({ ...intent, patientId: patientUid })}`);
           }
-        } else if (effectiveCaregiverId) {
-          // FreeBrainer invite flow (original)
-          try {
-            const { data: existingLink } = await supabase
-              .from('caregiver_links')
-              .select('id')
-              .eq('caregiver_id', effectiveCaregiverId)
-              .eq('patient_id', user.id)
-              .maybeSingle();
+          return;
+        }
 
-            if (!existingLink) {
-              await (supabase
-                .from('caregiver_links') as any)
-                .insert({
-                  caregiver_id: effectiveCaregiverId,
-                  patient_id: user.id
-                });
-            }
-          } catch (e) {
-            console.warn("Caregiver link Supabase insert failed, caching locally", e);
-          }
-
-          const newLinkObjCaregiver = {
-            patient_id: user.id,
-            profiles: { display_name: "FreeBrainer", deletion_scheduled_at: null }
-          };
-          const cachedCaregiver = JSON.parse(localStorage.getItem(`dev_caregiver_links_${effectiveCaregiverId}`) || '[]');
-          if (!cachedCaregiver.some((item: any) => item.patient_id === user.id)) {
-            cachedCaregiver.push(newLinkObjCaregiver);
-            localStorage.setItem(`dev_caregiver_links_${effectiveCaregiverId}`, JSON.stringify(cachedCaregiver));
-          }
-
-          if (teamId) {
+        if (intent.kind === "join_as_freebrainer") {
+          // The INVITEE is a FreeBrainer. The inviting BrainLover's id (optional)
+          // links them to their BrainLover; otherwise this is a team-only FB join.
+          if (intent.caregiverId) {
             try {
-              localStorage.setItem(`user_team_${user.id}`, JSON.stringify({
-                team_id: teamId,
-                user_id: user.id
-              }));
-
-              const { data: existingTeam } = await safeSupabaseQuery<any>(() =>
-                (supabase.from('team_members') as any)
-                  .select('id')
-                  .eq('team_id', teamId)
-                  .eq('user_id', user.id)
-                  .maybeSingle()
-              );
-                
-              if (!existingTeam) {
-                await safeSupabaseQuery(() =>
-                  (supabase.from('team_members') as any)
-                    .insert({
-                      team_id: teamId,
-                      user_id: user.id
-                    })
-                );
+              const { data: existingLink } = await supabase
+                .from('caregiver_links')
+                .select('id')
+                .eq('caregiver_id', intent.caregiverId)
+                .eq('patient_id', user.id)
+                .maybeSingle();
+              if (!existingLink) {
+                await (supabase
+                  .from('caregiver_links') as any)
+                  .insert({ caregiver_id: intent.caregiverId, patient_id: user.id });
               }
             } catch (e) {
-              console.log("Team insertion skipped", e);
+              console.warn("Caregiver link Supabase insert failed, caching locally", e);
             }
+            cacheLink(intent.caregiverId, user.id);
           }
-
-          sessionStorage.removeItem('pendingInvite');
+          await joinTeam();
 
           toast({
             title: "Successfully Connected!",
             description: "Your account is now linked with your BrainLover squad.",
           });
+          sessionStorage.removeItem('pendingInvite');
 
           if (isOnboarded) {
-            navigate("/check-in");
+            navigate(getDefaultRouteForRole(userRole));
           } else {
-            const caregiverParam = effectiveCaregiverId ? `&caregiver_id=${effectiveCaregiverId}` : "";
-            navigate(`/onboarding?flow=freebrainer${caregiverParam}`);
+            navigate(`/onboarding?${intentToParams(intent)}`);
           }
+          return;
+        }
+
+        // join_as_brainlover OR team_only — no patient context to link yet.
+        await joinTeam();
+        toast({
+          title: "Successfully Connected!",
+          description: intent.kind === "join_as_brainlover"
+            ? "You'll pick your FreeBrainer next."
+            : "Welcome to the team!",
+        });
+        sessionStorage.removeItem('pendingInvite');
+
+        if (isOnboarded) {
+          navigate(intent.kind === "join_as_brainlover" ? "/caregiver" : getDefaultRouteForRole(userRole));
+        } else {
+          navigate(`/onboarding?${intentToParams(intent)}`);
         }
       } catch (error: any) {
         console.error("Error joining team/linking:", error);
@@ -324,7 +304,7 @@ export default function JoinTeam() {
     };
 
     processInvite();
-  }, [session, user, isLoading, teamId, caregiverId, patientId, role, fbName, inviterName, navigate, toast]);
+  }, [session, user, isLoading, teamId, caregiverId, patientId, fbName, inviterName, kind, userRole, navigate, toast]);
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">

@@ -13,6 +13,7 @@
  */
 import { supabase, safeSupabaseQuery } from "@/lib/supabase";
 import { getOtpRedirectUrl } from "@/lib/otpRedirect";
+import type { InviteKind } from "@/lib/inviteRouting";
 
 const PROD_JOIN_URL = "https://app.freethebrains.com/join";
 
@@ -48,6 +49,42 @@ export interface InviteSendOptions {
   /** When set, appends team_id to the magic-link redirect so the invitee
    *  also joins this team after onboarding. */
   teamId?: string;
+}
+
+export interface JoinLinkParams {
+  teamId?: string | null;
+  patientId?: string | null;
+  caregiverId?: string | null;
+  role?: string | null;
+  fbName?: string | null;
+  inviterName?: string | null;
+  /** Explicit invite intent so JoinTeam never has to guess semantics. */
+  kind?: InviteKind | null;
+  /** Override the base join URL (defaults to the production app). */
+  baseUrl?: string;
+}
+
+/**
+ * Build the /join invite link with all invite context as query params.
+ * Used by BOTH the email OTP redirect and the share/copy-link buttons so a
+ * copied link carries the same patient context as the emailed one. Without a
+ * kind/patient the invitee would fall into the wrong onboarding.
+ */
+export function buildJoinLink(params: JoinLinkParams): string {
+  // Default to the CURRENT origin (same host as the email OTP redirect) so a
+  // copied link exercises the same deployment the inviter is on — never a
+  // statically hardcoded branch. Explicit baseUrl still overrides.
+  const base = params.baseUrl || (typeof window !== "undefined" ? window.location.origin : PROD_JOIN_URL);
+  const q = new URLSearchParams();
+  if (params.teamId) q.set("team_id", params.teamId);
+  if (params.patientId) q.set("patient_id", params.patientId);
+  if (params.caregiverId) q.set("caregiver_id", params.caregiverId);
+  if (params.role) q.set("role", params.role);
+  if (params.fbName) q.set("fb_name", params.fbName);
+  if (params.inviterName) q.set("inviter_name", params.inviterName);
+  if (params.kind) q.set("kind", params.kind);
+  const query = q.toString();
+  return query ? `${base}?${query}` : base;
 }
 
 export async function sendBrainLoverInvite(
@@ -114,15 +151,16 @@ export async function sendBrainLoverInvite(
   //    user_metadata. Supabase strips query params from magic link redirects,
   //    but user_metadata survives and is available in session.user.user_metadata
   //    after the invitee clicks the link and gets a session.
-  const baseUrl = getOtpRedirectUrl("/join");
-  const params = new URLSearchParams();
-  if (opts?.teamId) params.set("team_id", opts.teamId);
-  if (context.patientId) params.set("patient_id", context.patientId);
-  if (context.caregiverId) params.set("caregiver_id", context.caregiverId);
-  if (context.role) params.set("role", context.role);
-  if (context.patientName) params.set("fb_name", context.patientName);
-  if (context.inviterName) params.set("inviter_name", context.inviterName);
-  const redirectUrl = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  const redirectUrl = buildJoinLink({
+    baseUrl: getOtpRedirectUrl("/join"),
+    teamId: opts?.teamId,
+    patientId: context.patientId,
+    caregiverId: context.caregiverId,
+    role: context.role,
+    fbName: context.patientName,
+    inviterName: context.inviterName,
+    kind: context.patientId ? "support_existing_fb" : "join_as_brainlover",
+  });
 
   console.log("[FB-DEBUG] sendBrainLoverInvite:", {
     email: cleanEmail,
@@ -156,6 +194,55 @@ export async function sendBrainLoverInvite(
 
   // 4. Notify listeners to refresh their invite lists
   window.dispatchEvent(new Event("fb-invite-sent"));
+
+  return { success: true };
+}
+
+export interface TeamFreeBrainerInviteOptions {
+  teamId?: string | null;
+  /** A BrainLover inviting their FreeBrainer. When present the invitee is
+   *  linked to them as a caregiver after onboarding. */
+  caregiverId?: string | null;
+}
+
+/**
+ * Invite a FreeBrainer to join a team ("Add Teammate → FreeBrainer").
+ * The magic link routes through /join with kind=join_as_freebrainer so JoinTeam
+ * sends the invitee through the FULL FreeBrainer onboarding (never a dashboard).
+ * When a caregiverId is provided the invitee is linked to that caregiver first.
+ */
+export async function sendTeamFreeBrainerInvite(
+  email: string,
+  opts: TeamFreeBrainerInviteOptions
+): Promise<SendInviteResult> {
+  const cleanEmail = email.toLowerCase().trim();
+  if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
+    return { success: false, error: "Invalid email address." };
+  }
+
+  const redirectUrl = buildJoinLink({
+    baseUrl: getOtpRedirectUrl("/join"),
+    teamId: opts.teamId,
+    caregiverId: opts.caregiverId,
+    kind: "join_as_freebrainer",
+  });
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email: cleanEmail,
+    options: {
+      emailRedirectTo: redirectUrl,
+      shouldCreateUser: true,
+      data: {
+        fb_invite_role: "caregiver",
+        fb_invite_caregiver_id: opts.caregiverId || null,
+      },
+    },
+  });
+
+  if (error) {
+    console.error("[FB-DEBUG] sendTeamFreeBrainerInvite OTP error:", error.message, error);
+    return { success: false, error: error.message };
+  }
 
   return { success: true };
 }

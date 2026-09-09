@@ -1033,7 +1033,15 @@
     "connectFailedTitle": "Couldn't connect",
     "connectFailedDesc": "Please try again.",
     "inviteSentExistingTitle": "Already on FreeBrain",
-    "existingUserDesc": "{{email}} already has a FreeBrain account — they'll be connected when they open the invite."
+    "existingUserDesc": "{{email}} already has a FreeBrain account — they'll be connected when they open the invite.",
+    "chooseInviteeTitle": "Who are you adding?",
+    "chooseInviteeDesc": "Invite someone to join your team.",
+    "addBrainLover": "Add a BrainLover",
+    "addBrainLoverDesc": "A supporter who will love and cheer them on.",
+    "addFreeBrainer": "Add a FreeBrainer",
+    "addFreeBrainerDesc": "They'll start with FreeBrainer onboarding.",
+    "addFreeBrainerDesc2": "A friend living with a brain condition, starting their journey.",
+    "backToChoose": "Change"
   },
   "bulkInviteModal": {
     "title": "Bulk Invite FreeBrainers",

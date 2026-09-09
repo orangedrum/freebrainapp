@@ -38,6 +38,7 @@ import { usePhotoUpload } from "@/features/onboarding/usePhotoUpload";
 import { useLocationSearch } from "@/features/onboarding/useLocationSearch";
 import { useSpeak } from "@/features/onboarding/useSpeak";
 import { fetchInviteContextByEmail } from "@/lib/brainloverInvites";
+import { computeInviteIntent, type InviteKind } from "@/lib/inviteRouting";
 
 export default function Onboarding() {
   const { t } = useTranslation();
@@ -55,6 +56,8 @@ export default function Onboarding() {
   const urlCaregiverId = searchParams.get("caregiver_id");
   const urlFbName = searchParams.get("fb_name");
   const urlInviterName = searchParams.get("inviter_name");
+  const urlTeamId = searchParams.get("team_id");
+  const inviteKind = searchParams.get("kind") as InviteKind | null;
 
   // ── Invite context state (resolved from URL → user_metadata → localStorage → Supabase) ──
   const [patientId, setPatientId] = useState<string | null>(urlPatientId || null);
@@ -139,9 +142,18 @@ export default function Onboarding() {
   }, [session, patientId]);
 
   // ── Step + flow state ──
-  // If URL specifies a flow, use it. Otherwise, if we recovered invite context
-  // (patientId from user_metadata or localStorage), default to "brainlover".
-  const resolvedFlow = urlFlow || (patientId ? "brainlover" : "freebrainer");
+  // The invite intent is the single source of truth for which onboarding the
+  // user gets — derived once here (kind + recovered patient context) instead of
+  // scattered fallbacks. It recomputes as patientId resolves from async sources.
+  const inviteIntent = computeInviteIntent({
+    teamId: urlTeamId,
+    patientId,
+    caregiverId: inviteCaregiverId,
+    fbName: fbNameParam,
+    inviterName: urlInviterName,
+    kind: inviteKind,
+  });
+  const resolvedFlow = urlFlow || inviteIntent.flow;
   const [step, setStep] = useState(initialStep);
   const [flowType, setFlowType] = useState<"freebrainer" | "brainlover">(resolvedFlow);
   const [patientInfo, setPatientInfo] = useState<{ name: string; avatar: string | null } | null>(null);
@@ -310,7 +322,7 @@ export default function Onboarding() {
       toast({ title: t("onboarding.uploadFailed"), description: msg, variant: "destructive" })
     );
 
-const totalSteps = flowType === "freebrainer" ? 15 : (patientId ? 7 : 9);
+const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 : 9);
 
   // ── Render ──
   return (

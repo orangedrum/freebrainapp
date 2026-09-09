@@ -37,7 +37,9 @@ export const SendToPhoneModal: React.FC<SendToPhoneModalProps> = ({
 
   // Generate the QR code URL — a fresh magic link that will authenticate on the phone.
   // The ?install=1 param triggers the install prompt on the phone after auth.
-  const appUrl = window.location.origin.includes("freethebrains.com") ? window.location.origin : "https://app.freethebrains.com";
+  // Uses the CURRENT origin (localhost/preview/production) so testing always
+  // lands on the build that sent the link — never a hardcoded branch.
+  const appUrl = window.location.origin;
   const qrLinkUrl = `${appUrl}?install=1&email=${encodeURIComponent(userEmail)}`;
 
   // Render a real, scannable QR code to the canvas.

@@ -950,7 +950,15 @@
     "connectFailedTitle": "Verbindung fehlgeschlagen",
     "connectFailedDesc": "Bitte versuche es erneut.",
     "inviteSentExistingTitle": "Schon auf FreeBrain",
-    "existingUserDesc": "{{email}} hat bereits ein FreeBrain-Konto — die Person wird verbunden, sobald sie die Einladung öffnet."
+    "existingUserDesc": "{{email}} hat bereits ein FreeBrain-Konto — die Person wird verbunden, sobald sie die Einladung öffnet.",
+    "chooseInviteeTitle": "Wen fügst du hinzu?",
+    "chooseInviteeDesc": "Lade jemanden ein, deinem Team beizutreten.",
+    "addBrainLover": "BrainLover hinzufügen",
+    "addBrainLoverDesc": "Ein Betreuer, der sie liebt und anfeuert.",
+    "addFreeBrainer": "FreeBrainer hinzufügen",
+    "addFreeBrainerDesc": "Sie starten mit dem FreeBrainer-Onboarding.",
+    "addFreeBrainerDesc2": "Ein Freund mit einer Gehirnerkrankung, der seine Reise beginnt.",
+    "backToChoose": "Ändern"
   },
   "bulkInviteModal": {
     "title": "Mehrere FreeBrainer Einladen",

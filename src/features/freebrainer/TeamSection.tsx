@@ -315,7 +315,13 @@ export function TeamSection() {
 
       {/* Modals */}
 
-      <InviteTeammateModal open={inviteOpen} onOpenChange={setInviteOpen} team={{ id: team.id, name: team.name, code: team.code }} />
+      <InviteTeammateModal
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        team={{ id: team.id, name: team.name, code: team.code }}
+        patientId={user?.id || null}
+        patientName={(user?.user_metadata as { name?: string } | undefined)?.name || null}
+      />
 
       <RecommendVideoModal
         isOpen={!!recModalMember}

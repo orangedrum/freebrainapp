@@ -23,6 +23,7 @@ import { Mail, Copy, Check, Share2, Heart, Send, Loader2 } from "lucide-react";
 import { ensureSameTeam } from "@/features/shared/useSubAccountCreate";
 import { ExistingUserSearch } from "@/components/shared/ExistingUserSearch";
 import { connectCaregiverLink, sendSmartInvite, DirectoryUser } from "@/lib/userDirectory";
+import { buildJoinLink } from "@/lib/brainloverInvites";
 
 interface InviteFreeBrainerModalProps {
   open: boolean;
@@ -42,7 +43,11 @@ export function InviteFreeBrainerModal({
   const [copied, setCopied] = useState(false);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
-  const inviteLink = `https://app.freethebrains.com/join?caregiver_id=${caregiverId}&role=caregiver`;
+  const inviteLink = buildJoinLink({
+    caregiverId,
+    role: "caregiver",
+    kind: "join_as_freebrainer",
+  });
   const shareMessage = `${t("inviteModal.title")} — FreeBrain\n${inviteLink}`;
 
   const handleCopyLink = () => {
@@ -110,8 +115,8 @@ export function InviteFreeBrainerModal({
     try {
       const { wasExistingUser, error } = await sendSmartInvite({
         email: email.trim(),
-        existingRedirect: `/join?caregiver_id=${caregiverId}&role=caregiver`,
-        newRedirect: `/join?caregiver_id=${caregiverId}&role=caregiver`,
+        existingRedirect: `/join?caregiver_id=${caregiverId}&role=caregiver&kind=join_as_freebrainer`,
+        newRedirect: `/join?caregiver_id=${caregiverId}&role=caregiver&kind=join_as_freebrainer`,
       });
 
       if (error) {

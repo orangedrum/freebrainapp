@@ -951,7 +951,15 @@
     "connectFailedTitle": "Não foi possível conectar",
     "connectFailedDesc": "Tente novamente.",
     "inviteSentExistingTitle": "Já está no FreeBrain",
-    "existingUserDesc": "{{email}} já tem uma conta FreeBrain — eles serão conectados quando abrirem o convite."
+    "existingUserDesc": "{{email}} já tem uma conta FreeBrain — eles serão conectados quando abrirem o convite.",
+    "chooseInviteeTitle": "Quem você está adicionando?",
+    "chooseInviteeDesc": "Convide alguém para entrar no seu time.",
+    "addBrainLover": "Adicionar um BrainLover",
+    "addBrainLoverDesc": "Um cuidador que vai amá-los e torcer por eles.",
+    "addFreeBrainer": "Adicionar um FreeBrainer",
+    "addFreeBrainerDesc": "Eles começarão com a integração do FreeBrainer.",
+    "addFreeBrainerDesc2": "Um amigo com uma condição cerebral, começando sua jornada.",
+    "backToChoose": "Alterar"
   },
   "bulkInviteModal": {
     "title": "Convidar Múltiplos FreeBrainers",

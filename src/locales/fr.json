@@ -951,7 +951,15 @@
     "connectFailedTitle": "Impossible de connecter",
     "connectFailedDesc": "Veuillez réessayer.",
     "inviteSentExistingTitle": "Déjà sur FreeBrain",
-    "existingUserDesc": "{{email}} possède déjà un compte FreeBrain : ils seront connectés lorsqu'ils ouvriront l'invitation."
+    "existingUserDesc": "{{email}} possède déjà un compte FreeBrain : ils seront connectés lorsqu'ils ouvriront l'invitation.",
+    "chooseInviteeTitle": "Qui ajoutez-vous ?",
+    "chooseInviteeDesc": "Invitez quelqu'un à rejoindre votre équipe.",
+    "addBrainLover": "Ajouter un BrainLover",
+    "addBrainLoverDesc": "Un aidant qui les aimera et les encouragera.",
+    "addFreeBrainer": "Ajouter un FreeBrainer",
+    "addFreeBrainerDesc": "Ils commenceront par le parcours FreeBrainer.",
+    "addFreeBrainerDesc2": "Un ami vivant avec une condition cérébrale, qui commence son parcours.",
+    "backToChoose": "Changer"
   },
   "bulkInviteModal": {
     "title": "Inviter Plusieurs FreeBrainers",
