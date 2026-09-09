@@ -24,12 +24,28 @@ interface InviteTeammateModalProps {
     name: string;
     code?: string;
   } | null;
+  /** Optional: when a FreeBrainer is being supported, invite teammates as
+   *  co-supporting BrainLovers instead of plain team members. The email then
+   *  carries patient context so the invitee routes through the invited
+   *  BrainLover onboarding (skip freebrainer setup) and gets linked + synced. */
+  patientId?: string | null;
+  patientName?: string | null;
+  patientAvatar?: string | null;
+  /** The current user's id (the inviter) when inviting a co-supporter. */
+  caregiverId?: string | null;
+  /** The inviter's display name (shown on the invitee's onboarding). */
+  inviterName?: string | null;
 }
 
 export function InviteTeammateModal({
   open,
   onOpenChange,
   team,
+  patientId,
+  patientName,
+  patientAvatar,
+  caregiverId,
+  inviterName,
 }: InviteTeammateModalProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -106,6 +122,39 @@ export function InviteTeammateModal({
 
     setIsSending(true);
     try {
+      // ── Co-supporter invite: carry the FreeBrainer context so the invitee
+      //    lands in the invited-BrainLover onboarding and gets linked + synced
+      //    to the same team (via JoinTeam → ensureSameTeam). ──
+      if (patientId) {
+        const { sendBrainLoverInvite } = await import("@/lib/brainloverInvites");
+        const result = await sendBrainLoverInvite(email.trim(), {
+          patientId,
+          caregiverId: caregiverId || "",
+          patientName: patientName || null,
+          patientAvatar: patientAvatar || null,
+          inviterName: inviterName || null,
+          role: "caregiver",
+          createdAt: Date.now(),
+        }, { teamId: team.id });
+
+        if (!result.success) {
+          toast({
+            title: t("inviteModal.connectFailedTitle"),
+            description: result.error,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: t("inviteModal.inviteSentTitle"),
+            description: t("inviteModal.inviteSentDesc", { email: email.trim() }),
+          });
+        }
+        setEmail("");
+        onOpenChange(false);
+        return;
+      }
+
+      // ── Generic teammate invite (no patient context) ──
       const { wasExistingUser, error } = await sendSmartInvite({
         email: email.trim(),
         existingRedirect: `/join?team_id=${team.id}`,

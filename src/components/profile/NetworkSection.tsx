@@ -269,8 +269,25 @@ export function NetworkSection({
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Invite Teammate Modal */}
-        <InviteTeammateModal open={showInviteModal} onOpenChange={setShowInviteModal} team={team} />
+        {/* Invite Teammate Modal — when a FreeBrainer is selected, invitees are
+            co-supporting BrainLovers (carry patient context to route them through
+            the invited onboarding + team sync). */}
+        {(() => {
+          const selectedCaregiver = isCaregiver
+            ? caregivers.find((c) => c.patient_id === selectedPatientForTeam)
+            : null;
+          return (
+            <InviteTeammateModal
+              open={showInviteModal}
+              onOpenChange={setShowInviteModal}
+              team={team}
+              patientId={isCaregiver ? selectedPatientForTeam : null}
+              patientName={selectedCaregiver?.profiles?.display_name || null}
+              patientAvatar={selectedCaregiver?.profiles?.avatar_url || null}
+              caregiverId={isCaregiver ? caregiverId : null}
+            />
+          );
+        })()}
 
         {/* BrainLover: Invite FreeBrainer Modal */}
         {isCaregiver && caregiverId && (

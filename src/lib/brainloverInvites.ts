@@ -36,6 +36,7 @@ export interface SendInviteResult {
  *
  * @param email        — the invitee's email address
  * @param context      — invite context (patient, inviter, etc.)
+ * @param opts         — optional invite extras (e.g. team to join)
  * @returns             — { success, error? }
  *
  * Side effects:
@@ -43,9 +44,16 @@ export interface SendInviteResult {
  *  - Adds email to the patient's invite list (for "Reinvite" CTA)
  *  - Dispatches "fb-invite-sent" window event
  */
+export interface InviteSendOptions {
+  /** When set, appends team_id to the magic-link redirect so the invitee
+   *  also joins this team after onboarding. */
+  teamId?: string;
+}
+
 export async function sendBrainLoverInvite(
   email: string,
-  context: InviteContext
+  context: InviteContext,
+  opts?: InviteSendOptions
 ): Promise<SendInviteResult> {
   const cleanEmail = email.toLowerCase().trim();
   if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
@@ -108,6 +116,7 @@ export async function sendBrainLoverInvite(
   //    after the invitee clicks the link and gets a session.
   const baseUrl = getOtpRedirectUrl("/join");
   const params = new URLSearchParams();
+  if (opts?.teamId) params.set("team_id", opts.teamId);
   if (context.patientId) params.set("patient_id", context.patientId);
   if (context.caregiverId) params.set("caregiver_id", context.caregiverId);
   if (context.role) params.set("role", context.role);
