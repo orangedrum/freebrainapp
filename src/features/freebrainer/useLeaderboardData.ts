@@ -63,7 +63,7 @@ export function useLeaderboardData(): UseLeaderboardDataResult {
   const [individual, setIndividual] = useState<LeaderboardUser[]>([]);
   const [teams, setTeams] = useState<LeaderboardTeam[]>([]);
   const [currentStreak, setCurrentStreak] = useState(0);
-  const [freeBrainScore, setFreeBrainScore] = useState(420);
+  const [freeBrainScore, setFreeBrainScore] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -85,7 +85,7 @@ export function useLeaderboardData(): UseLeaderboardDataResult {
             .maybeSingle()
         );
 
-        const myScore = myProfile?.total_score || 420;
+        const myScore = myProfile?.total_score || 0;
         if (!cancelled) setFreeBrainScore(myScore);
 
         // Calculate streak from daily_checkins

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Copy, Check, Share2, Users, Send, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { ExistingUserSearch } from "@/components/shared/ExistingUserSearch";
+import { connectToTeam, sendSmartInvite, DirectoryUser } from "@/lib/userDirectory";
 
 interface InviteTeammateModalProps {
   open: boolean;
@@ -29,10 +31,12 @@ export function InviteTeammateModal({
   onOpenChange,
   team,
 }: InviteTeammateModalProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   if (!team) return null;
 
@@ -66,6 +70,29 @@ export function InviteTeammateModal({
     }
   };
 
+  const handleConnectExisting = async (user: DirectoryUser) => {
+    setBusyUserId(user.user_id);
+    const res = await connectToTeam(team.id, user.user_id);
+    setBusyUserId(null);
+
+    if (res.ok) {
+      toast({
+        title: t("inviteModal.teamConnectedTitle"),
+        description: t("inviteModal.teamConnectedDesc", {
+          name: user.display_name || "Teammate",
+          team: team.name,
+        }),
+      });
+      onOpenChange(false);
+    } else {
+      toast({
+        title: t("inviteModal.connectFailedTitle"),
+        description: t("inviteModal.connectFailedDesc"),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSendEmailInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !email.includes("@")) {
@@ -79,21 +106,23 @@ export function InviteTeammateModal({
 
     setIsSending(true);
     try {
-      // Send magic link invite or store in invitations
-      const { error } = await supabase.auth.signInWithOtp({
+      const { wasExistingUser, error } = await sendSmartInvite({
         email: email.trim(),
-        options: {
-          emailRedirectTo: `https://app.freethebrains.com/join?team_id=${team.id}`,
-        },
+        existingRedirect: `/join?team_id=${team.id}`,
+        newRedirect: `/join?team_id=${team.id}`,
       });
 
       if (error) {
-        console.warn("OTP invite error (non-fatal):", error.message);
+        console.warn("OTP invite error (non-fatal):", error);
       }
 
       toast({
-        title: "Invite Sent! 🚀",
-        description: `An invitation email has been sent to ${email.trim()}.`,
+        title: wasExistingUser
+          ? t("inviteModal.inviteSentExistingTitle")
+          : t("inviteModal.inviteSentTitle"),
+        description: wasExistingUser
+          ? t("inviteModal.existingUserDesc", { email: email.trim() })
+          : t("inviteModal.inviteSentDesc", { email: email.trim() }),
       });
       setEmail("");
       onOpenChange(false);
@@ -153,6 +182,12 @@ export function InviteTeammateModal({
               </Button>
             </div>
           </form>
+
+          <ExistingUserSearch
+            onConnect={handleConnectExisting}
+            connectLabel={t("inviteModal.addTeammate")}
+            busyUserId={busyUserId}
+          />
 
           <div className="relative flex items-center justify-center">
             <div className="absolute inset-0 flex items-center">

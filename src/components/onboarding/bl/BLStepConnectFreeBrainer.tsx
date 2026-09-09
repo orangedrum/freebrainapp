@@ -37,6 +37,7 @@ interface BLStepConnectFreeBrainerProps {
   patientEmail: string;
   setPatientEmail: (email: string) => void;
   onSubAccountCreated: (patientId: string, patientName: string, formData?: { conditions?: string; location?: string; diagnosisStory?: string; photo?: string | null }) => void;
+  onFoundFreeBrainer: (userId: string) => void;
   onNext: () => void;
   onBack: () => void;
   speak: (text: string) => void;
@@ -48,6 +49,7 @@ export const BLStepConnectFreeBrainer: React.FC<BLStepConnectFreeBrainerProps> =
   patientEmail,
   setPatientEmail,
   onSubAccountCreated,
+  onFoundFreeBrainer,
   onNext,
   onBack,
   speak,
@@ -157,21 +159,25 @@ export const BLStepConnectFreeBrainer: React.FC<BLStepConnectFreeBrainerProps> =
     if (!searchQuery.trim() || searchQuery.trim().length < 3) return;
     setIsSearching(true);
     try {
-      // Search by email or display name
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, avatar_url")
-        .ilike("display_name", `%${searchQuery.trim()}%`)
-        .limit(5);
-
+      // Directory search by name OR email — works pre-auth via the
+      // SECURITY DEFINER `search_profiles` RPC (migration 41).
+      const { data, error } = await supabase.rpc("search_profiles", {
+        search_query: searchQuery.trim(),
+      });
       if (error) throw error;
-      setSearchResults(data || []);
-    } catch (e) {
-      console.warn("Search error:", e);
-      // Also try email-based invite
-      if (searchQuery.includes("@")) {
-        setPatientEmail(searchQuery.trim());
-      }
+      const results = (data || []).map((r) => ({
+        user_id: r.user_id as string,
+        display_name: r.display_name as string,
+        avatar_url: r.avatar_url as string | null,
+      }));
+      setSearchResults(results);
+    } catch (e: any) {
+      console.warn("FreeBrainer search error:", e);
+      toast({
+        title: t("inviteModal.searchFailedTitle", "Search unavailable"),
+        description: t("inviteModal.searchFailedDesc", "We couldn't search right now. Try inviting by email below."),
+        variant: "destructive",
+      });
     } finally {
       setIsSearching(false);
     }
@@ -438,6 +444,7 @@ export const BLStepConnectFreeBrainer: React.FC<BLStepConnectFreeBrainerProps> =
                     setFoundPatient({ user_id: r.user_id, display_name: r.display_name });
                     setSearchResults([]);
                     setSearchQuery("");
+                    onFoundFreeBrainer(r.user_id);
                   }}
                 >
                   <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold shrink-0">

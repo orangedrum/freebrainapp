@@ -72,6 +72,11 @@ export default function BrainLoverDashboard() {
   const [showCalendlyModal, setShowCalendlyModal] = useState(false);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [scoreBoostKey, setScoreBoostKey] = useState(0);
+  // Track if the BrainLover completed a proxy check-in OR manually dismissed
+  // the modal during THIS session. Either way, prevent the modal from reopening
+  // during the refetch window (where hasCheckedInToday may briefly be false).
+  const [completedCheckInThisSession, setCompletedCheckInThisSession] = useState(false);
+  const [dismissedThisSession, setDismissedThisSession] = useState(false);
   const jointCheckInRef = useRef<HTMLDivElement>(null);
 
   const { hasSOS } = useBrainLoverSOS(patient?.user_id);
@@ -82,6 +87,19 @@ export default function BrainLoverDashboard() {
   useEffect(() => {
     setEmpty(isEmpty);
   }, [isEmpty, setEmpty]);
+
+  // Auto-open the proxy check-in modal if the selected FreeBrainer hasn't
+  // checked in today. Waits for data to finish loading and respects the
+  // session-completed / session-dismissed flags so it doesn't reopen during
+  // the refetch window.
+  useEffect(() => {
+    if (isLoading) return;
+    if (hasCheckedInToday || completedCheckInThisSession || dismissedThisSession || !patient) {
+      setShowCheckInModal(false);
+    } else {
+      setShowCheckInModal(true);
+    }
+  }, [hasCheckedInToday, isLoading, completedCheckInThisSession, dismissedThisSession, patient]);
 
   if (isLoading) {
     return (
@@ -216,10 +234,23 @@ export default function BrainLoverDashboard() {
       {patient && (
         <BrainLoverCheckInModal
           isOpen={showCheckInModal}
-          onOpenChange={setShowCheckInModal}
+          onOpenChange={(open) => {
+            setShowCheckInModal(open);
+            if (!open) {
+              if (!hasCheckedInToday && !completedCheckInThisSession) {
+                setDismissedThisSession(true);
+              } else {
+                setCompletedCheckInThisSession(true);
+              }
+              loadDashboardData();
+            }
+          }}
           patientId={patient.user_id}
           patientEmail={patient.email}
-          onCheckedIn={loadDashboardData}
+          onCheckedIn={() => {
+            setCompletedCheckInThisSession(true);
+            loadDashboardData();
+          }}
         />
       )}
       <CalendlyModal

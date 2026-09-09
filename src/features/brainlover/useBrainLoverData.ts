@@ -205,6 +205,13 @@ export function useBrainLoverData(userId: string | undefined) {
           seenIds.add(pid);
           const prof = profileMap[pid];
           const managed = managedMap[pid];
+          // Skip orphan links whose patient has no identity (no profile, no
+          // managed row, no invite context) — they'd surface a check-in target
+          // the database validation trigger will reject.
+          if (!prof && !managed) {
+            console.warn("[FB-DEBUG] Skipping orphan patient link with no identity:", pid);
+            return;
+          }
           const resolvedName = prof?.display_name || managed?.display_name || "FreeBrainer";
           fetchedPatients.push({
             user_id: pid,

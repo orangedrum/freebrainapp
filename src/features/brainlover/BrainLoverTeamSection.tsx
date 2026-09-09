@@ -14,7 +14,7 @@ import { useBrainLoverLeaderboard } from "@/features/brainlover/useBrainLoverLea
 
 export function BrainLoverTeamSection({ patientId }: { patientId: string }) {
   const { team, loading, refresh: refreshTeam } = useTeamProfile(patientId);
-  const { members, brainLoversByMember, loading: rosterLoading, refresh: refreshRoster } = useTeamRoster(team?.id || null, patientId);
+  const { members, supporters, brainLoversByMember, loading: rosterLoading, refresh: refreshRoster } = useTeamRoster(team?.id || null, patientId);
   const { teams } = useBrainLoverLeaderboard(patientId);
 
   if (loading) {
@@ -32,6 +32,7 @@ export function BrainLoverTeamSection({ patientId }: { patientId: string }) {
       rank={currentTeamRank}
       userId={patientId}
       members={members}
+      supporters={supporters}
       brainLoversByMember={brainLoversByMember}
       selectedMemberId={patientId}
       onTeamJoined={() => { refreshTeam(); refreshRoster(); }}

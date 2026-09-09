@@ -58,6 +58,8 @@ interface StepBrainLoverFlowProps {
   caregiverId: string;
   patientEmail: string;
   setPatientEmail: (email: string) => void;
+  onFoundFreeBrainer: (userId: string) => void;
+  foundPatientId?: string | null;
   onSubAccountCreated: (patientId: string, patientName: string, formData?: { conditions?: string; location?: string; diagnosisStory?: string; photo?: string | null }) => void;
   freeBrainerName: string;
   // Sub-account patient ID (for passing through to Want Support invites)
@@ -91,6 +93,8 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
   caregiverId,
   patientEmail,
   setPatientEmail,
+  onFoundFreeBrainer,
+  foundPatientId,
   onSubAccountCreated,
   freeBrainerName,
   subAccountPatientId,
@@ -244,6 +248,7 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
         patientEmail={patientEmail}
         setPatientEmail={setPatientEmail}
         onSubAccountCreated={onSubAccountCreated}
+        onFoundFreeBrainer={onFoundFreeBrainer}
         onNext={() => setStep(managementMode === "manage" ? 6 : 8)}
         onBack={() => setStep(4)}
         speak={speak}
@@ -282,7 +287,7 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
       <BLStepWantSupport
         freeBrainerName={freeBrainerName}
         caregiverId={caregiverId}
-        patientId={subAccountPatientId}
+        patientId={subAccountPatientId || foundPatientId || null}
         patientAvatar={freeBrainerAvatar}
         onNext={() => setStep(9)}
         onBack={() => setStep(managementMode === "manage" ? 7 : 5)}

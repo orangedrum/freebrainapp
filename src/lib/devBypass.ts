@@ -149,7 +149,7 @@ export function seedMockTables(): void {
     locale: "en",
     deletion_scheduled_at: null,
     caregiver_type: "personal",
-    total_score: 420,
+    total_score: 0,
   });
   // Patient profiles from localStorage
   const linksParsed = JSON.parse(linksRaw || "[]");

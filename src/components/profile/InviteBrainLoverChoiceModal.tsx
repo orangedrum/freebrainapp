@@ -17,7 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, Brain, Users, Mail, Send, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { ensureSameTeam } from "@/features/shared/useSubAccountCreate";
+import { ExistingUserSearch } from "@/components/shared/ExistingUserSearch";
+import { connectCaregiverLink, sendSmartInvite, DirectoryUser } from "@/lib/userDirectory";
 
 type InviteMode = "choice" | "support" | "platform";
 
@@ -47,6 +49,7 @@ export function InviteBrainLoverChoiceModal({
   const [mode, setMode] = useState<InviteMode>("choice");
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   const handleClose = () => {
     setMode("choice");
@@ -54,36 +57,42 @@ export function InviteBrainLoverChoiceModal({
     onClose();
   };
 
-  // Option 2: Platform invite — no patient link, just join FreeBrain as a BrainLover
+  // Option 2: Platform invite — no patient link, just join FreeBrain as a BrainLover.
+  // Smart: existing accounts get a plain app link (land on their dashboard), brand-new
+  // emails go through BrainLover onboarding.
   const handlePlatformInvite = async () => {
     if (!email.trim() || !email.includes("@")) return;
     setSending(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: `https://app.freethebrains.com/onboarding?role=caregiver&invited_by=${caregiverId}`,
-          shouldCreateUser: true,
-          data: {
-            fb_invite_role: "caregiver",
-            fb_invite_caregiver_id: caregiverId,
-            fb_invite_inviter_name: inviterName || null,
-            fb_invite_patient_id: null,
-            fb_invite_platform_invite: true,
-          },
+      const { wasExistingUser, error } = await sendSmartInvite({
+        email: email.trim(),
+        existingRedirect: "/",
+        newRedirect: `/onboarding?role=caregiver&invited_by=${caregiverId}`,
+        data: {
+          fb_invite_role: "caregiver",
+          fb_invite_caregiver_id: caregiverId,
+          fb_invite_inviter_name: inviterName || null,
+          fb_invite_patient_id: null,
+          fb_invite_platform_invite: true,
         },
       });
 
       if (error) {
-        console.warn("[FB-DEBUG] Platform invite OTP error:", error.message);
+        console.warn("[FB-DEBUG] Platform invite OTP error:", error);
       }
 
       toast({
-        title: t("inviteBLChoice.platformSent", "Invite sent!"),
-        description: t("inviteBLChoice.platformSentDesc", {
-          email: email.trim(),
-          defaultValue: `Sent an invitation to ${email.trim()}. They'll go through BrainLover onboarding to set up their own FreeBrainer.`,
-        }),
+        title: wasExistingUser
+          ? t("inviteBLChoice.platformExistingTitle", "Already on FreeBrain")
+          : t("inviteBLChoice.platformSent", "Invite sent!"),
+        description: wasExistingUser
+          ? t("inviteBLChoice.platformExistingDesc", "{{email}} already has a FreeBrain account. An app link has been sent.", {
+              email: email.trim(),
+            })
+          : t("inviteBLChoice.platformSentDesc", {
+              email: email.trim(),
+              defaultValue: `Sent an invitation to ${email.trim()}. They'll go through BrainLover onboarding to set up their own FreeBrainer.`,
+            }),
       });
       handleClose();
     } catch (e: any) {
@@ -94,6 +103,44 @@ export function InviteBrainLoverChoiceModal({
       });
     } finally {
       setSending(false);
+    }
+  };
+
+  // Support mode search — connect an existing FreeBrain/team user as a co-supporter of the
+  // selected FreeBrainer, instead of sending them a second onboarding email.
+  const handleConnectCoSupporter = async (user: DirectoryUser) => {
+    if (!patientId) {
+      toast({
+        title: t("inviteBLChoice.error", "Failed to send"),
+        description: t("inviteBLChoice.noPatient", "No FreeBrainer selected to share with."),
+        variant: "destructive",
+      });
+      return;
+    }
+    setBusyUserId(user.user_id);
+    const res = await connectCaregiverLink(user.user_id, patientId);
+    if (res.ok) {
+      await ensureSameTeam(user.user_id, patientId).catch((e: any) =>
+        console.warn("[FB-DEBUG] ensureSameTeam skipped:", e?.message)
+      );
+    }
+    setBusyUserId(null);
+
+    if (res.ok) {
+      toast({
+        title: t("inviteBLChoice.supportConnectedTitle", "Added as supporter!"),
+        description: t("inviteBLChoice.supportConnectedDesc", "{{name}} can now help support {{patient}}.", {
+          name: user.display_name || "This person",
+          patient: patientName || "your FreeBrainer",
+        }),
+      });
+      handleClose();
+    } else {
+      toast({
+        title: t("inviteBLChoice.error", "Failed to send"),
+        description: res.error,
+        variant: "destructive",
+      });
     }
   };
 
@@ -175,6 +222,21 @@ export function InviteBrainLoverChoiceModal({
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
+              <div className="border-2 border-dashed border-primary/20 rounded-xl p-3">
+                <ExistingUserSearch
+                  onConnect={handleConnectCoSupporter}
+                  connectLabel={t("inviteBLChoice.addCoSupporter", "Add as supporter")}
+                  busyUserId={busyUserId}
+                />
+              </div>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-muted" />
+                </div>
+                <span className="relative bg-background px-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+                  {t("inviteBLChoice.orByEmail", "or invite by email")}
+                </span>
+              </div>
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">
                   {t("inviteBLChoice.emailLabel", "Their email address")}
@@ -217,6 +279,20 @@ export function InviteBrainLoverChoiceModal({
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
+              <div className="border-2 border-dashed border-primary/20 rounded-xl p-3">
+                <ExistingUserSearch
+                  onConnect={() => {}}
+                  showConnectButton={false}
+                />
+              </div>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-muted" />
+                </div>
+                <span className="relative bg-background px-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+                  {t("inviteBLChoice.orByEmail", "or invite by email")}
+                </span>
+              </div>
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">
                   {t("inviteBLChoice.emailLabel", "Their email address")}

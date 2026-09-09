@@ -12,6 +12,7 @@
  *
  * Returns:
  *  - members: array of TeamMember objects (FreeBrainers only)
+ *  - supporters: array of RosterSupporter objects (role caregiver/brainlover, no points)
  *  - brainLoversByMember: map of userId → RosterBrainLover[] (their BrainLovers)
  *  - loading: boolean
  *  - refresh: re-fetch trigger
@@ -40,9 +41,22 @@ export interface RosterBrainLover {
   avatar_url?: string;
 }
 
+/**
+ * A Supporters-group entry — a BrainLover (caregiver) who is on the same team
+ * as the FreeBrainer they support. Never carries points.
+ */
+export interface RosterSupporter {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  /** The FreeBrainer user_id this supporter is linked to (via caregiver_links). */
+  supportsUserId: string | null;
+}
+
 export function useTeamRoster(teamId?: string | null, overrideUserId?: string | null) {
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [supporters, setSupporters] = useState<RosterSupporter[]>([]);
   const [brainLoversByMember, setBrainLoversByMember] = useState<Record<string, RosterBrainLover[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -52,6 +66,7 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
   useEffect(() => {
     if (!user || !teamId) {
       setMembers([]);
+      setSupporters([]);
       setBrainLoversByMember({});
       setLoading(false);
       return;
@@ -94,6 +109,7 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
         ],
       };
       setMembers(mockMembers);
+      setSupporters([]);
       setBrainLoversByMember(mockBrainLovers);
       setLoading(false);
       return;
@@ -113,7 +129,10 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
         );
 
         if (!teamMembers || teamMembers.length === 0) {
-          if (!cancelled) setMembers([]);
+          if (!cancelled) {
+            setMembers([]);
+            setSupporters([]);
+          }
           return;
         }
 
@@ -131,7 +150,10 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
         );
 
         if (!profiles || profiles.length === 0) {
-          if (!cancelled) setMembers([]);
+          if (!cancelled) {
+            setMembers([]);
+            setSupporters([]);
+          }
           return;
         }
 
@@ -187,31 +209,56 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
 
         const sosUserIds = new Set((sosPosts || []).map((p: any) => p.user_id));
 
-        // 6. Assemble the roster
-        const roster: TeamMember[] = profiles.map((p: any) => {
+        // 5b. Fetch roles for team members (distinguish FreeBrainers from BrainLovers)
+        const { data: roles } = await safeSupabaseQuery<any>(() =>
+          (supabase.from("user_roles") as any)
+            .select("user_id, role")
+            .in("user_id", profiles.map((p: any) => p.user_id))
+        );
+        const roleByUser = new Map<string, string>();
+        (roles || []).forEach((r: any) => roleByUser.set(r.user_id, r.role));
+        const isBrainLover = (userId: string) => {
+          const role = roleByUser.get(userId);
+          return role === "caregiver" || role === "brainlover";
+        };
+
+        // 6. Assemble the roster (FreeBrainers only) + supporters (caregiver/brainlover)
+        const roster: TeamMember[] = [];
+        const supportersList: RosterSupporter[] = [];
+        for (const p of profiles) {
           const userCheckins = checkinsByUser[p.user_id] || [];
           const streak = computeStreak(userCheckins);
-          return {
-            user_id: p.user_id,
-            display_name: p.display_name || "FreeBrainer",
-            avatar_url: p.avatar_url,
-            total_score: p.total_score || 0,
-            condition: conditionMap.get(p.user_id) || null,
-            checked_in_today: checkedInIds.has(p.user_id),
-            streak,
-            has_sos: sosUserIds.has(p.user_id),
-          };
-        });
+          if (isBrainLover(p.user_id)) {
+            supportersList.push({
+              user_id: p.user_id,
+              display_name: p.display_name || "BrainLover",
+              avatar_url: p.avatar_url || null,
+              supportsUserId: null, // filled below from caregiver_links
+            });
+          } else {
+            roster.push({
+              user_id: p.user_id,
+              display_name: p.display_name || "FreeBrainer",
+              avatar_url: p.avatar_url,
+              total_score: p.total_score || 0,
+              condition: conditionMap.get(p.user_id) || null,
+              checked_in_today: checkedInIds.has(p.user_id),
+              streak,
+              has_sos: sosUserIds.has(p.user_id),
+            });
+          }
+        }
 
         if (!cancelled) setMembers(roster);
 
-        // 7. Fetch BrainLovers (caregiver_links) for each team member (ADR 006)
+        // 7. Fetch caregiver_links: per-FreeBrainer BrainLovers + supporter links
         const allUserIds = profiles.map((p: any) => p.user_id);
         const { data: blLinks } = await safeSupabaseQuery<any>(() =>
           (supabase.from("caregiver_links") as any)
             .select("caregiver_id, patient_id")
             .in("patient_id", allUserIds)
         );
+        const patientIdSet = new Set(allUserIds);
 
         if (blLinks && blLinks.length > 0) {
           const caregiverIds = [...new Set(blLinks.map((l: any) => l.caregiver_id))];
@@ -225,6 +272,7 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
           (blProfiles || []).forEach((p: any) => blMap.set(p.user_id, p));
 
           const byMember: Record<string, RosterBrainLover[]> = {};
+          const supportsMap = new Map<string, string>();
           blLinks.forEach((link: any) => {
             const prof = blMap.get(link.caregiver_id);
             if (!byMember[link.patient_id]) byMember[link.patient_id] = [];
@@ -233,16 +281,31 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
               display_name: prof?.display_name || "BrainLover",
               avatar_url: prof?.avatar_url,
             });
+            // For a supporter who is ALSO on this team roster, record which
+            // FreeBrainer they support.
+            if (patientIdSet.has(link.caregiver_id)) {
+              supportsMap.set(link.caregiver_id, link.patient_id);
+            }
           });
 
-          if (!cancelled) setBrainLoversByMember(byMember);
+          if (!cancelled) {
+            setBrainLoversByMember(byMember);
+            setSupporters(supportersList.map((s) => ({
+              ...s,
+              supportsUserId: supportsMap.get(s.user_id) || null,
+            })));
+          }
         } else {
-          if (!cancelled) setBrainLoversByMember({});
+          if (!cancelled) {
+            setBrainLoversByMember({});
+            setSupporters(supportersList);
+          }
         }
       } catch (e) {
         console.warn("[FB-DEBUG] useTeamRoster error:", e);
         if (!cancelled) {
           setMembers([]);
+          setSupporters([]);
           setBrainLoversByMember({});
         }
       } finally {
@@ -256,7 +319,7 @@ export function useTeamRoster(teamId?: string | null, overrideUserId?: string | 
     };
   }, [user, teamId, refreshKey]);
 
-  return { members, brainLoversByMember, loading, refresh };
+  return { members, supporters, brainLoversByMember, loading, refresh };
 }
 
 /**

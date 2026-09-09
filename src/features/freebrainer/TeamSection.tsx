@@ -34,7 +34,7 @@ import { RallyTeamModal } from "@/features/checkin/RallyTeamModal";
 import { RosterRow } from "@/features/freebrainer/RosterRow";
 import { RankRow } from "@/features/freebrainer/RankRow";
 import { useTeamProfile } from "@/features/freebrainer/useTeamProfile";
-import { useTeamRoster, type TeamMember } from "@/features/freebrainer/useTeamRoster";
+import { useTeamRoster, type TeamMember, type RosterSupporter } from "@/features/freebrainer/useTeamRoster";
 import { useLeaderboardData } from "@/features/freebrainer/useLeaderboardData";
 import { sendTeammateCheer } from "@/lib/brainloverInteractions";
 import { RecommendVideoModal } from "@/components/shared/RecommendVideoModal";
@@ -50,7 +50,7 @@ export function TeamSection() {
   const { toast } = useToast();
   const { team, loading: teamLoading, refresh: refreshTeam } = useTeamProfile();
   const { teams: rankedTeams, loading: leaderboardLoading } = useLeaderboardData();
-  const { members, brainLoversByMember, loading: rosterLoading, refresh: refreshRoster } =
+  const { members, supporters, brainLoversByMember, loading: rosterLoading, refresh: refreshRoster } =
     useTeamRoster(team?.id);
 
   const [joinTeamOpen, setJoinTeamOpen] = useState(false);
@@ -261,6 +261,45 @@ export function TeamSection() {
                   isOwnRow={member.user_id === user?.id}
                   isAssociatedFreeBrainer={false}
                 />
+              ))}
+            </div>
+          )}
+
+          {/* Supporters group — BrainLovers on this team (no points, no actions) */}
+          {supporters.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                {t("roster.supportersTitle", "Supporters")}
+              </p>
+              {supporters.map((s) => (
+                <div
+                  key={s.user_id}
+                  className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-muted/10 p-3"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 overflow-hidden">
+                    {s.avatar_url ? (
+                      <img src={s.avatar_url} alt={s.display_name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] font-bold">
+                        {s.display_name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-foreground truncate">{s.display_name}</p>
+                    {s.supportsUserId && (() => {
+                      const supported = members.find((m) => m.user_id === s.supportsUserId);
+                      return supported ? (
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {t("roster.supportsLabel", "Supporting")} {supported.display_name}
+                        </p>
+                      ) : null;
+                    })()}
+                  </div>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold shrink-0">
+                    {t("roster.brainLoverBadge", "BrainLover")}
+                  </span>
+                </div>
               ))}
             </div>
           )}

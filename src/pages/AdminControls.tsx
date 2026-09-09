@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isDevBypassUser, clearDevCheckIn, isDevBypassMode, seedMockTables } from "@/lib/devBypass";
+import { TestAccountsPanel } from "@/features/admin/TestAccountsPanel";
 
 /** Clear all caches (localStorage + service worker + browser cache) and hard-reload. */
 async function clearAllCachesAndReload() {
@@ -110,6 +111,9 @@ export default function AdminControls() {
           </p>
         </div>
       </div>
+
+      {/* Test Accounts */}
+      <TestAccountsPanel />
 
       {/* Reset Check-in */}
       <Card className="border-primary/30">

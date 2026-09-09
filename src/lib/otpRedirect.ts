@@ -1,20 +1,16 @@
 /**
- * Returns the correct Supabase OTP redirect URL.
+ * Returns the correct Supabase OTP redirect URL for the current environment.
  *
- * Supabase only sends the magic-link email if `emailRedirectTo` matches
- * a URL in the Auth → URL Configuration → Redirect URLs list.
- * When testing on a preview URL (e.g. vibepreview.com), `window.location.origin`
- * is NOT in that list, so Supabase silently drops the email.
+ * Always uses `window.location.origin` so magic links resolve to the same
+ * host the user is on (localhost, Vercel preview, or production).
  *
- * This helper uses the production URL as a fallback so invites work everywhere.
+ * IMPORTANT: Every Supabase project must have ALL valid origins in
+ * Auth → URL Configuration → Redirect URLs:
+ *   - https://app.freethebrains.com
+ *   - https://*.vercel.app  (or specific preview domains)
+ *   - http://localhost:*
  */
-const PRODUCTION_ORIGIN = "https://app.freethebrains.com";
-
 export function getOtpRedirectUrl(path: string = "/join"): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : PRODUCTION_ORIGIN;
-  // Use production URL if we're NOT on the production domain
-  if (!origin.includes("freethebrains.com")) {
-    return `${PRODUCTION_ORIGIN}${path}`;
-  }
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://app.freethebrains.com";
   return `${origin}${path}`;
 }

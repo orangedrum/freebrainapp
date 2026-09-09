@@ -183,6 +183,7 @@ export default function Onboarding() {
   const [subAccountPatientId, setSubAccountPatientId] = useState<string | null>(null);
   const [subAccountName, setSubAccountName] = useState<string>("");
   const [subAccountFormData, setSubAccountFormData] = useState<{ conditions?: string; location?: string; diagnosisStory?: string; photo?: string | null }>({});
+  const [foundPatientId, setFoundPatientId] = useState<string | null>(null);
 
   // ── OS detection for wearables ──
   useEffect(() => {
@@ -237,7 +238,7 @@ export default function Onboarding() {
     diagnosisStory, shareConsent, location, photo, displayName,
     selectedTeam, teamCode, inviteCaregiverId,
     caregiverType, facility, patientEmail, connectionMethod, patientId,
-    managementMode, subAccountPatientId,
+    managementMode, subAccountPatientId, foundPatientId,
     // ── Sub-account form data (for re-creating in Supabase after auth) ──
     subAccountName: subAccountName || null,
     subAccountConditions: subAccountFormData.conditions || null,
@@ -409,6 +410,8 @@ const totalSteps = flowType === "freebrainer" ? 15 : (patientId ? 7 : 9);
                 managementMode={managementMode} setManagementMode={setManagementMode}
                 caregiverId={session?.user?.id || "dev-user-id"}
                 patientEmail={patientEmail} setPatientEmail={setPatientEmail}
+                onFoundFreeBrainer={setFoundPatientId}
+                foundPatientId={foundPatientId}
                 onSubAccountCreated={(pid, name, formData) => { setSubAccountPatientId(pid); setSubAccountName(name); if (formData) setSubAccountFormData(formData); }}
                 freeBrainerName={subAccountName || patientInfo?.name || fbNameParam || ""}
                 freeBrainerAvatar={patientInfo?.avatar || fbAvatarParam || null}

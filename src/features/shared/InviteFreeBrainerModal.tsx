@@ -20,7 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Copy, Check, Share2, Heart, Send, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { ensureSameTeam } from "@/features/shared/useSubAccountCreate";
+import { ExistingUserSearch } from "@/components/shared/ExistingUserSearch";
+import { connectCaregiverLink, sendSmartInvite, DirectoryUser } from "@/lib/userDirectory";
 
 interface InviteFreeBrainerModalProps {
   open: boolean;
@@ -38,6 +40,7 @@ export function InviteFreeBrainerModal({
   const [email, setEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   const inviteLink = `https://app.freethebrains.com/join?caregiver_id=${caregiverId}&role=caregiver`;
   const shareMessage = `${t("inviteModal.title")} — FreeBrain\n${inviteLink}`;
@@ -65,6 +68,33 @@ export function InviteFreeBrainerModal({
     }
   };
 
+  const handleConnectExisting = async (user: DirectoryUser) => {
+    setBusyUserId(user.user_id);
+    const res = await connectCaregiverLink(caregiverId, user.user_id);
+    if (res.ok) {
+      await ensureSameTeam(caregiverId, user.user_id).catch((e: any) =>
+        console.warn("[FB-DEBUG] ensureSameTeam skipped:", e?.message)
+      );
+    }
+    setBusyUserId(null);
+
+    if (res.ok) {
+      toast({
+        title: t("inviteModal.connectedToFreebrainerTitle"),
+        description: t("inviteModal.connectedToFreebrainerDesc", {
+          name: user.display_name || "FreeBrainer",
+        }),
+      });
+      onOpenChange(false);
+    } else {
+      toast({
+        title: t("inviteModal.connectFailedTitle"),
+        description: t("inviteModal.connectFailedDesc"),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSendEmailInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !email.includes("@")) {
@@ -78,21 +108,23 @@ export function InviteFreeBrainerModal({
 
     setIsSending(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { wasExistingUser, error } = await sendSmartInvite({
         email: email.trim(),
-        options: {
-          emailRedirectTo: `https://app.freethebrains.com/join?caregiver_id=${caregiverId}&role=caregiver`,
-          shouldCreateUser: true,
-        },
+        existingRedirect: `/join?caregiver_id=${caregiverId}&role=caregiver`,
+        newRedirect: `/join?caregiver_id=${caregiverId}&role=caregiver`,
       });
 
       if (error) {
-        console.warn("OTP invite error (non-fatal):", error.message);
+        console.warn("OTP invite error (non-fatal):", error);
       }
 
       toast({
-        title: t("inviteModal.inviteSentTitle"),
-        description: t("inviteModal.inviteSentDesc", { email: email.trim() }),
+        title: wasExistingUser
+          ? t("inviteModal.inviteSentExistingTitle")
+          : t("inviteModal.inviteSentTitle"),
+        description: wasExistingUser
+          ? t("inviteModal.existingUserDesc", { email: email.trim() })
+          : t("inviteModal.inviteSentDesc", { email: email.trim() }),
       });
       setEmail("");
       onOpenChange(false);
@@ -152,6 +184,12 @@ export function InviteFreeBrainerModal({
               </Button>
             </div>
           </form>
+
+          <ExistingUserSearch
+            onConnect={handleConnectExisting}
+            connectLabel={t("inviteModal.connectExisting")}
+            busyUserId={busyUserId}
+          />
 
           <div className="relative flex items-center justify-center">
             <div className="absolute inset-0 flex items-center">

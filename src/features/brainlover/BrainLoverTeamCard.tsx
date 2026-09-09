@@ -33,7 +33,7 @@ import { RallyTeamToMoveModal } from "@/components/shared/RallyTeamToMoveModal";
 import { RallyTeamModal } from "@/features/checkin/RallyTeamModal";
 import { BrainLoverRosterMinimized } from "@/features/brainlover/BrainLoverRosterMinimized";
 import { BrainLoverRosterExpanded } from "@/features/brainlover/BrainLoverRosterExpanded";
-import type { TeamMember, RosterBrainLover } from "@/features/freebrainer/useTeamRoster";
+import type { TeamMember, RosterBrainLover, RosterSupporter } from "@/features/freebrainer/useTeamRoster";
 
 export function BrainLoverTeamCard({
   team,
@@ -41,6 +41,7 @@ export function BrainLoverTeamCard({
   rank,
   userId,
   members,
+  supporters,
   brainLoversByMember,
   selectedMemberId,
   onTeamJoined,
@@ -52,6 +53,7 @@ export function BrainLoverTeamCard({
   rank?: number;
   userId?: string;
   members?: TeamMember[];
+  supporters?: RosterSupporter[];
   brainLoversByMember?: Record<string, RosterBrainLover[]>;
   selectedMemberId?: string | null;
   onTeamJoined?: (team: any) => void;
@@ -175,6 +177,42 @@ export function BrainLoverTeamCard({
                     ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Supporters — BrainLovers on the team (no points) */}
+          {supporters && supporters.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                {t("roster.supportersTitle", "Supporters")}
+              </p>
+              <div className="space-y-1">
+                {supporters.map((s) => (
+                  <div key={s.user_id} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 p-2">
+                    <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 overflow-hidden">
+                      {s.avatar_url ? (
+                        <img src={s.avatar_url} alt={s.display_name} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-[9px] font-bold">{s.display_name.slice(0, 2).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-foreground truncate">{s.display_name}</p>
+                      {s.supportsUserId && (() => {
+                        const supported = members?.find((m) => m.user_id === s.supportsUserId);
+                        return supported ? (
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {t("roster.supportsLabel", "Supporting")} {supported.display_name}
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
+                    <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold shrink-0">
+                      {t("roster.brainLoverBadge", "BrainLover")}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

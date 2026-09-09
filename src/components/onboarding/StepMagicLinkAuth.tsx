@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +8,9 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { isDevBypassUser } from "@/lib/devBypass";
 import { IOSInstallGuide } from "@/components/shared/IOSInstallGuide";
+import { getOtpRedirectUrl } from "@/lib/otpRedirect";
+import { useAuth } from "@/contexts/AuthContext";
+import { getDefaultRouteForRole } from "@/components/auth/RoleGuards";
 
 // Detect iOS for showing the manual install guide
 const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -33,6 +37,8 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
   customButtonLabel,
 }) => {
   const { t } = useTranslation();
+  const { session } = useAuth();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,12 +53,25 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
     setErrorMessage("");
 
     try {
+      // Smart redirect: if user is already onboarded with a role, send them
+      // to their dashboard. Otherwise send them back to /onboarding so the
+      // resume effect can complete the flow.
+      const userRole = session?.user
+        ? (await supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle())?.data?.role ?? null
+        : null;
+      const profileRes = session?.user
+        ? await supabase.from("profiles").select("onboarding_completed").eq("user_id", session.user.id).maybeSingle()
+        : null;
+      const alreadyOnboarded = !!userRole && !!(profileRes?.data as any)?.onboarding_completed;
+
+      const redirectPath = alreadyOnboarded
+        ? getDefaultRouteForRole(userRole)
+        : `/onboarding${location.search || "?install=1"}`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          // Redirect back to /onboarding so the useEffect can complete the flow.
-          // Include ?install=1 so the app shows the install prompt when opened on mobile.
-          emailRedirectTo: `https://app.freethebrains.com/onboarding?install=1`,
+          emailRedirectTo: getOtpRedirectUrl(redirectPath),
           shouldCreateUser: true,
         },
       });

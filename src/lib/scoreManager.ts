@@ -16,13 +16,13 @@ import { isDevBypassUser } from "@/lib/devBypass";
 
 /**
  * Read the current total_score for a user from Supabase.
- * Falls back to localStorage cache or 420 baseline.
+ * Falls back to localStorage cache or 0 baseline.
  */
 export async function getFreeBrainScore(userId: string): Promise<number> {
   // Dev-bypass: read from localStorage only
   if (isDevBypassUser(userId)) {
     const cached = localStorage.getItem(`fb_score_${userId}`);
-    return cached ? parseInt(cached, 10) : 420;
+    return cached ? parseInt(cached, 10) : 0;
   }
 
   try {
@@ -42,7 +42,7 @@ export async function getFreeBrainScore(userId: string): Promise<number> {
 
   // Fallback to localStorage cache or baseline
   const cached = localStorage.getItem(`fb_score_${userId}`);
-  return cached ? parseInt(cached, 10) : 420;
+    return cached ? parseInt(cached, 10) : 0;
 }
 
 /**

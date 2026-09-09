@@ -23,6 +23,7 @@ import { Smartphone, X, Mail, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+import { getOtpRedirectUrl } from "@/lib/otpRedirect";
 import { SendToPhoneModal } from "./SendToPhoneModal";
 import { IOSInstallGuide } from "./IOSInstallGuide";
 import { AndroidInstallGuide } from "./AndroidInstallGuide";
@@ -80,7 +81,7 @@ export const InstallBanner: React.FC<InstallBannerProps> = ({
         await supabase.auth.signInWithOtp({
           email: userEmail,
           options: {
-            emailRedirectTo: `https://app.freethebrains.com?install=1`,
+            emailRedirectTo: getOtpRedirectUrl("/?install=1"),
           },
         });
         setEmailReminderSent(true);

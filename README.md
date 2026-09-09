@@ -2,6 +2,12 @@
 
 [app.freethebrains.com](https://app.freethebrains.com) — A React + TypeScript progressive web app for FreeBrain, a neuro-therapy platform offering on-demand movement therapy. Built with Vite, Tailwind CSS, shadcn/ui, react-i18next, and Supabase (auth + Postgres with RLS). Supports three roles — **FreeBrainer**, **BrainLover** (caregiver), **Pro** (facility) — plus an app Admin. Fully internationalized in English, German, Spanish, French, and Portuguese.
 
+## Auth & Email (Magic Links)
+
+- Auth is Supabase (email OTP magic links) — see `src/lib/supabase.ts`.
+- **Transactional email is sent by Resend**, configured in the Supabase project under **Authentication → Email → SMTP** (not in this codebase). If magic-link emails stop arriving, check the Resend account / Supabase SMTP settings, not the app code.
+- The "Find your FreeBrainer" directory search (name or email lookup during BrainLover onboarding) runs through the `search_profiles` Postgres RPC — `supabase/migrations/41_freebrainer_directory_search.sql`. Run that migration against the project before the search can work in prod.
+
 ## Requirements
 
 - Node.js 18+ (LTS recommended)

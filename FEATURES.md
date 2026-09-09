@@ -25,6 +25,18 @@
 
 ## Feature Modules
 
+### `admin` (shared)
+
+**Components:**
+
+- `TestAccountsPanel` — [src/features/admin/TestAccountsPanel.tsx](src/features/admin/TestAccountsPanel.tsx)
+
+**Other files:**
+
+- `testAccounts.ts` — [src/features/admin/testAccounts.ts](src/features/admin/testAccounts.ts)
+
+**Cross-feature dependencies:** none
+
 ### `brainlover` (brainlover)
 
 **Components:**

@@ -38,7 +38,7 @@ function genId(): string {
 
 interface Filter {
   column: string;
-  op: "eq" | "in" | "gte" | "gt" | "lte" | "lt" | "neq" | "not" | "is";
+  op: "eq" | "in" | "gte" | "gt" | "lte" | "lt" | "neq" | "not" | "is" | "ilike";
   value: any;
 }
 
@@ -97,6 +97,7 @@ class MockQueryBuilder {
   lte(col: string, val: any) { this.filters.push({ column: col, op: "lte", value: val }); return this; }
   lt(col: string, val: any) { this.filters.push({ column: col, op: "lt", value: val }); return this; }
   is(col: string, val: any) { this.filters.push({ column: col, op: "is", value: val }); return this; }
+  ilike(col: string, pattern: any) { this.filters.push({ column: col, op: "ilike", value: pattern }); return this; }
   not(col: string, op: string, val: any) {
     // .not("total_score", "is", null) → filter where total_score IS NOT null
     this.filters.push({ column: col, op: "not" as any, value: val });
@@ -146,6 +147,12 @@ class MockQueryBuilder {
           // .not(col, "is", null) → col IS NOT null
           if (f.value === null || f.value === undefined) {
             if (val === null || val === undefined) return false;
+          }
+          break;
+        case "ilike":
+          {
+            const needle = String(f.value).replace(/%/g, "").toLowerCase();
+            if (needle && !String(val ?? "").toLowerCase().includes(needle)) return false;
           }
           break;
       }
@@ -298,6 +305,57 @@ export const mockSupabaseClient = {
     return new MockQueryBuilder(table);
   },
   auth: mockAuth,
+  // Mirrors the real RPCs from migrations 41 + 42.
+  rpc(name: string, params?: Record<string, unknown>) {
+    const searchProfiles = (limit: number) => {
+      const query = String(params?.search_query ?? "").trim().toLowerCase();
+      return readTable("profiles")
+        .filter((row) => {
+          if (!query) return false;
+          const name = String(row.display_name ?? "").toLowerCase();
+          const email = String(row.email ?? "").toLowerCase();
+          return name.includes(query) || email.includes(query);
+        })
+        .slice(0, limit)
+        .map((row) => ({
+          user_id: row.user_id,
+          display_name: row.display_name ?? null,
+          avatar_url: row.avatar_url ?? null,
+        }));
+    };
+
+    if (name === "search_profiles") {
+      return Promise.resolve({ data: searchProfiles(5), error: null });
+    }
+
+    if (name === "search_users_for_invite") {
+      const roles = readTable("user_roles");
+      const data = searchProfiles(8).map((row) => ({
+        ...row,
+        role: roles.find((r: any) => r.user_id === row.user_id)?.role ?? "freebrainer",
+      }));
+      return Promise.resolve({ data, error: null });
+    }
+
+    if (name === "lookup_user_by_email") {
+      const target = String(params?.target_email ?? "").trim().toLowerCase();
+      const roles = readTable("user_roles");
+      const row = readTable("profiles").find(
+        (r) => String(r.email ?? "").trim().toLowerCase() === target
+      );
+      const data = row
+        ? [{
+            user_id: row.user_id,
+            display_name: row.display_name ?? null,
+            avatar_url: row.avatar_url ?? null,
+            role: roles.find((r: any) => r.user_id === row.user_id)?.role ?? "freebrainer",
+          }]
+        : [];
+      return Promise.resolve({ data, error: null });
+    }
+
+    return Promise.resolve({ data: null, error: new Error(`Mock RPC not implemented: ${name}`) });
+  },
   channel: () => ({
     on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }),
     subscribe: () => ({ unsubscribe: () => {} }),

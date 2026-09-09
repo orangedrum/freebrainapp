@@ -1,4 +1,29 @@
 {
+  "adminAccounts": {
+    "title": "Cuentas de prueba",
+    "subtitle": "Las cuentas que se usan para probar cada rol en la app.",
+    "roles": {
+      "admin": "Administrador",
+      "freebrainer": "FreeBrainer",
+      "caregiver": "Cuidador"
+    },
+    "onboardingCompleted": "Onboarding completado",
+    "onboardingPending": "Onboarding pendiente",
+    "onboardingUnknown": "Estado del onboarding desconocido",
+    "relationships": "Relaciones",
+    "noRelationship": "Sin FreeBrainer vinculado",
+    "noLoginHint": "(sin inicio de sesión)",
+    "snapshotNote": "Instantánea estática (septiembre 2026). Para actualizarla, vuelve a ejecutar las consultas SQL de docs/test-accounts.md.",
+    "org": "Organización",
+    "hubLabel": "FreeBrainer principal",
+    "connectedCaregivers": "Cuidadores vinculados",
+    "linkedTo": "Vinculado a",
+    "manages": "Gestiona",
+    "managedFreebrainer": "FreeBrainer gestionado",
+    "legendLinked": "Línea verde — un cuidador vinculado a este FreeBrainer",
+    "legendManaged": "Línea azul — un cuidador que gestiona esta subcuenta",
+    "adminNote": "Cuenta de administrador principal — también registrada como FreeBrainer. Usa el menú de desarrollo para cambiar de rol."
+  },
   "loader": {
     "brainFact": "Dato Cerebral del Día"
   },
@@ -191,18 +216,13 @@
     "searchOrCreateTeam": "Busca equipos abiertos, ingresa un código o crea un equipo nuevo."
   },
   "nav": {
-    "overview": "Resumen",
-    "checkIn": "Check-in",
-    "community": "Comunidad",
-    "leaderboard": "Clasificación",
-    "profile": "Perfil",
-    "caregiver": "Panel de Cuidador",
     "dashboard": "Panel",
+    "support": "Soporte",
+    "community": "Comunidad",
+    "profile": "Yo",
+    "caregiver": "Portal BrainLover",
     "pro": "Panel Pro",
-    "logout": "Cerrar Sesión",
-    "blHome": "Inicio",
-    "blTracking": "Seguimiento",
-    "blProfile": "Perfiles"
+    "adminControls": "Controles de Admin"
   },
   "auth": {
     "title": "Bienvenido a FreeBrain",
@@ -319,7 +339,7 @@
       "skip": "Tal vez después — llévame a mi panel"
     },
     "bl": {
-      "welcomeTitle": "¡Claramente amas los cerebros!",
+      "welcomeTitle": "¡De verdad amas el cerebro de alguien!",
       "welcomeSub": "¡Muchas gracias por apoyar a tu FreeBrainer, {{name}}!",
       "welcomeSubFallback": "¡Muchas gracias por apoyar a tu FreeBrainer!",
       "isThisThem": "¿Es este tu FreeBrainer?",
@@ -328,8 +348,8 @@
       "yesConfirm": "¡Sí, es este!",
       "noDeny": "No, buscar",
       "searchTitle": "Lamentamos la confusión.",
-      "searchDesc": "Por favor busca a tu FreeBrainer actual.",
-      "searchPlaceholder": "Ingresa su correo o código",
+      "searchDesc": "Busca a tu FreeBrainer por nombre o invítalo por correo.",
+      "searchPlaceholder": "Buscar por nombre o correo",
       "searchButton": "Buscar FreeBrainer",
       "checkinTitle": "Cómo funciona FreeBrain",
       "checkinDesc1": "Los check-ins de FreeBrain fomentan el movimiento constante sin culpa.",
@@ -369,7 +389,6 @@
         "classes": "Recibir alertas SOS y programar clases virtuales",
         "complete": "Ir al Panel"
       },
-      "welcomeTitle": "¡De verdad amas el cerebro de alguien!",
       "welcomeRole": "Eso te convierte en un BrainLover de FreeBrain — alguien que mantiene a su ser querido en movimiento diario.",
       "getStarted": "Empezar",
       "profileTitle": "Cuéntanos sobre ti",
@@ -384,8 +403,6 @@
       "connectIndependentTitle": "Encuentra a tu FreeBrainer",
       "subCreated": "¡Cuenta de FreeBrainer creada!",
       "subCreatedDesc": "Puedes añadir más FreeBrainers luego desde tu panel.",
-      "searchDesc": "Busca a tu FreeBrainer por nombre o invítalo por correo.",
-      "searchPlaceholder": "Buscar por nombre o correo",
       "foundFreeBrainer": "¡Encontrado! Te vincularemos cuando termines la configuración.",
       "inviteByEmail": "O invitar por correo",
       "sendInvite": "Enviar Invitación",
@@ -546,69 +563,8 @@
     "voiceNotSupportedDesc": "Prueba con Chrome o Safari."
   },
   "caregiverDashboard": {
-    "loading": "Cargando panel...",
-    "lazyEvalTitle": "Tuviste {{class}} ayer.",
-    "lazyEvalDesc": "Marca la asistencia de tus {{count}} FreeBrainers con un toque.",
-    "skip": "Omitir",
-    "confirmAttendance": "Confirmar Asistencia",
-    "title": "Panel de Cuidador",
-    "subtitle": "Gestiona a tus FreeBrainers y programa sesiones.",
-    "yourFreeBrainers": "Tus FreeBrainers",
-    "monitorMovement": "Monitorea su movimiento y estado de salud.",
-    "inviteLink": "Enlace de Invitación",
-    "noFreeBrainers": "Aún no tienes FreeBrainers vinculados.",
-    "inviteSomeone": "Invitar a alguien",
-    "dayStreak": "días de racha",
-    "checkedIn": "Check-in realizado",
-    "notYet": "Aún no ha realizado el check-in",
-    "autoTracking": "Seguimiento Automático",
-    "reduceManual": "Reduce el registro manual con dispositivos.",
-    "connectWearables": "Conectar Wearables",
-    "connectDevices": "Conectar Dispositivos",
-    "attendanceLogged": "¡Asistencia Registrada!",
-    "attendanceLoggedDesc": "Se ha registrado el check-in para {{count}} FreeBrainers.",
-    "errorLogging": "Error al registrar la asistencia",
-    "linkCopied": "¡Enlace Copiado!",
-    "linkCopiedDesc": "Enlace de invitación copiado al portapapeles.",
-    "cheerSent": "¡Ánimo enviado!",
-    "supportSent": "¡Apoyo enviado!",
-    "rallySent": "¡Apoyo enviado!",
-    "deletionWarning": "Advertencia de Eliminación de Cuenta",
-    "deletionWarningDesc": "Tu perfil no tiene un FreeBrainer vinculado. Tienes hasta",
-    "deletionWarningDesc2": "para vincular un FreeBrainer antes de que tu cuenta sea eliminada automáticamente.",
-    "linkNow": "Vincular un FreeBrainer ahora →",
-    "brainLoverPortal": "Portal BrainLover",
-    "portalSubtitle": "Anima y apoya el viaje de movimiento diario de tu FreeBrainer.",
-    "inviteFreeBrainer": "Invitar FreeBrainer",
-    "bulkInvite": "Invitación Masiva",
-    "subAccount": "Subcuenta",
-    "freeBrainerLabel": "FreeBrainer:",
-    "selectFreeBrainer": "Seleccionar FreeBrainer",
-    "checkedInToday": "Check-in Hecho Hoy",
-    "actionNeeded": "Acción Necesaria",
-    "switchingView": "Cambiando vista activa",
-    "todayMovementStatus": "Estado de Movimiento de Hoy",
-    "hasCheckedIn": "HA HECHO CHECK-IN",
-    "hasNotCheckedIn": "NO HA HECHO CHECK-IN",
-    "statusLabel": "Estado",
-    "movementLabel": "Movimiento",
-    "checkedInTodayExclaim": "¡Hizo check-in hoy!",
-    "encourageAndCheer": "Animar y Felicitar",
-    "recommendVideo": "Recomendar Video",
-    "remindToMove": "Recordar",
-    "toMove": "¡moverse!",
-    "noLinkedFreeBrainer": "Aún No Hay FreeBrainer Vinculado",
-    "noLinkedDesc": "Invita a tu FreeBrainer a conectarse y comienza a apoyar su viaje de movimiento diario.",
-    "createSubAccount": "Crear Subcuenta",
-    "chartDesc": "Demostrando visualmente cómo el movimiento constante reduce directamente la gravedad de los síntomas con el tiempo.",
-    "symptomCorrelation": "Correlación de Síntomas",
-    "private": "Privado",
-    "mustEnableSharing": "{{name}} debe habilitar el intercambio HIPAA / Muro en configuración para ver el gráfico de tendencias.",
-    "pokeSentToast": "¡Toque enviado! ⚡",
-    "pokeSentDesc": "Se envió un recordatorio amistoso a {{name}}. ¡Aparecerá una alerta en su check-in y panel!",
-    "cheerMessage": "¡Sigue así {{name}}! ¡Tú puedes!",
-    "cheerSentToast": "¡Ánimo enviado! ❤️",
-    "cheerSentDesc": "¡Tu apoyo para {{name}} fue compartido!"
+    "inviteAnotherFreeBrainer": "Invitar FreeBrainer",
+    "inviteBrainLover": "Invitar BrainLover"
   },
   "chart": {
     "loading": "Cargando datos de correlación de movimiento...",
@@ -624,10 +580,27 @@
     "beTheFirst": "Cada movimiento cuenta. Sé el primero en reclamar tu lugar en el escenario global."
   },
   "community": {
-    "emptyTitle": "El muro está tranquilo...",
-    "emptyDesc": "¡Sé el primero en inspirar a la comunidad con tu movimiento!",
-    "recordSomething": "Grabar algo",
-    "teamRallyRequest": "SOLICITUD DE APOYO DEL EQUIPO"
+    "wallTitle": "El Mural",
+    "wallSubtitle": "Ánimo, logros y novedades de otros FreeBrainers y BrainLovers.",
+    "filterAll": "Todas las Publicaciones",
+    "filterSos": "🆘 Publicaciones SOS",
+    "filterRecommendations": "💡 Recomendaciones",
+    "shareUpdate": "Compartir Actualización",
+    "noPostsTitle": "No se encontraron publicaciones",
+    "noPostsDesc": "¡Sé el primero en compartir una actualización o logro con la comunidad!",
+    "postSharedToast": "¡Publicación compartida con la comunidad!",
+    "postErrorToast": "No se pudo publicar en este momento.",
+    "cheerSentToast": "¡Aplauso enviado! ❤️",
+    "giveCheer": "Dar Aplauso",
+    "cheers": "Aplausos",
+    "postedBy": "Publicado por BrainLover ({{name}}) •",
+    "linkedFreeBrainers": "FreeBrainers Vinculados",
+    "noLinkedListed": "No hay FreeBrainers vinculados.",
+    "brainLoverProBadge": "BrainLover Pro",
+    "sosBadge": "🆘 Publicación SOS",
+    "recommendationBadge": "💡 Recomendación",
+    "updateBadge": "💬 Actualización",
+    "rankPassed": "superó a"
   },
   "recommendVideo": {
     "title": "Recomendar un Video de Movimiento",
@@ -734,7 +707,7 @@
     "howMuchTimeDesc": "Encontraremos un video de movimiento que se ajuste a tu horario.",
     "min": "min",
     "startMoving": "Empezar a Moverse",
-"alreadyMoved": "Ya me moví",
+    "alreadyMoved": "Ya me moví",
     "noPreview": "Vista previa no disponible",
     "loadingVideo": "Cargando video...",
     "stepTime": "¿Cuánto tiempo tienes?",
@@ -885,7 +858,9 @@
     "confirmDelete": "Sí, Programar Eliminación"
   },
   "common": {
-    "cancel": "Cancelar"
+    "dictate": "Dictar",
+    "listening": "Escuchando…",
+    "speechUnsupported": "La entrada por voz no es compatible con este navegador."
   },
   "videoPlayer": {
     "play": "Reproducir",
@@ -942,20 +917,13 @@
     "tabMe": "Yo",
     "tabMyTeam": "Mi Equipo"
   },
-  "nav": {
-    "dashboard": "Panel",
-    "love": "Amor",
-    "wall": "Mural",
-    "community": "Mural",
-    "profile": "Yo",
-    "caregiver": "Portal BrainLover",
-    "pro": "Panel Pro",
-    "adminControls": "Controles de Admin"
-  },
   "adminControls": {
-    "title": "Controles de Administrador",
-    "subtitle": "Gestionar listas de reproducción, sesiones de prueba y restablecer datos.",
-    "notAuthorized": "Se requiere acceso de administrador."
+    "title": "Controles de Admin",
+    "subtitle": "Gestionar playlists, probar sesiones y reiniciar datos.",
+    "notAuthorized": "Se requiere acceso de administrador.",
+    "clearCacheTitle": "Borrar Todos los Cachés y Recargar",
+    "clearCacheDesc": "Borra localStorage, service workers y caché del navegador. La app se recargará inmediatamente.",
+    "clearCacheButton": "Borrar y Recargar"
   },
   "love": {
     "title": "Amor",
@@ -992,29 +960,6 @@
   },
   "support": {
     "subtitle": "Recursos educativos para apoyar tu viaje de movimiento."
-  },
-  "community": {
-    "wallTitle": "El Mural",
-    "wallSubtitle": "Ánimo, logros y novedades de otros FreeBrainers y BrainLovers.",
-    "filterAll": "Todas las Publicaciones",
-    "filterSos": "🆘 Publicaciones SOS",
-    "filterRecommendations": "💡 Recomendaciones",
-    "shareUpdate": "Compartir Actualización",
-    "noPostsTitle": "No se encontraron publicaciones",
-    "noPostsDesc": "¡Sé el primero en compartir una actualización o logro con la comunidad!",
-    "postSharedToast": "¡Publicación compartida con la comunidad!",
-    "postErrorToast": "No se pudo publicar en este momento.",
-    "cheerSentToast": "¡Aplauso enviado! ❤️",
-    "giveCheer": "Dar Aplauso",
-    "cheers": "Aplausos",
-    "postedBy": "Publicado por BrainLover ({{name}}) •",
-    "linkedFreeBrainers": "FreeBrainers Vinculados",
-    "noLinkedListed": "No hay FreeBrainers vinculados.",
-    "brainLoverProBadge": "BrainLover Pro",
-    "sosBadge": "🆘 Publicación SOS",
-    "recommendationBadge": "💡 Recomendación",
-    "updateBadge": "💬 Actualización",
-    "rankPassed": "superó a"
   },
   "createPost": {
     "title": "Compartir con la Comunidad",
@@ -1058,8 +1003,20 @@
     "inviteSentDesc": "Se ha enviado un correo de invitación a {{email}}.",
     "invitePreparedTitle": "¡Invitación Enviada!",
     "invitePreparedDesc": "Detalles de invitación preparados para {{email}}.",
+    "searchFailedTitle": "Búsqueda no disponible",
+    "searchFailedDesc": "No pudimos buscar ahora. Intenta invitar por correo electrónico abajo.",
     "noEmailTitle": "¿Sin correo?",
-    "noEmailDesc": "Si tu FreeBrainer no tiene correo electrónico, puedes crear una subcuenta gestionada desde tu Perfil para seguir su progreso."
+    "noEmailDesc": "Si tu FreeBrainer no tiene correo electrónico, puedes crear una subcuenta gestionada desde tu Perfil para seguir su progreso.",
+    "addTeammate": "Añadir al equipo",
+    "connectExisting": "Conectar",
+    "teamConnectedTitle": "¡Compañero de equipo añadido!",
+    "teamConnectedDesc": "{{name}} ahora está en {{team}}.",
+    "connectedToFreebrainerTitle": "¡Conectado!",
+    "connectedToFreebrainerDesc": "{{name}} ahora está conectado contigo.",
+    "connectFailedTitle": "No se pudo conectar",
+    "connectFailedDesc": "Por favor, inténtalo de nuevo.",
+    "inviteSentExistingTitle": "Ya está en FreeBrain",
+    "existingUserDesc": "{{email}} ya tiene una cuenta de FreeBrain: se conectarán cuando abran la invitación."
   },
   "bulkInviteModal": {
     "title": "Invitar Múltiples FreeBrainers",
@@ -1146,11 +1103,6 @@
       "cancelCreate": "Cancelar"
     }
   },
-  "common": {
-    "dictate": "Dictar",
-    "listening": "Escuchando…",
-    "speechUnsupported": "La entrada por voz no es compatible con este navegador."
-  },
   "adminTestPanel": {
     "title": "Panel de Pruebas de Sesiones",
     "description": "Inyecta sesiones de prueba para verificar el componente VirtualSessionCalendar en diferentes estados.",
@@ -1224,74 +1176,17 @@
       "communityReportsDesc": "Publicaciones de la comunidad reportadas"
     }
   },
-  "nav": {
-    "dashboard": "Panel",
-    "support": "Soporte",
-    "community": "Comunidad",
-    "profile": "Yo",
-    "caregiver": "Portal BrainLover",
-    "pro": "Panel Pro",
-    "adminControls": "Controles de Admin"
-  },
   "roster": {
-    "title": "Lista de Equipo",
-    "addTeammate": "Añadir Compañero",
-    "emptyTitle": "Aún no hay compañeros",
-    "emptyDesc": "¡Invita a compañeros a unirse a tu equipo y animar juntos!",
     "checkedIn": "Registrado",
     "notYet": "Aún no",
-    "dayStreak": "días seguidos",
+    "streak": "Racha",
     "pts": "pts",
-    "cheerTitle": "Enviar ánimo",
-    "recommendVideo": "Recomendar video",
-    "cheerSentTitle": "¡Ánimo enviado! ❤️",
-    "cheerSentDesc": "¡Has animado a {{name}}!",
-    "cheerErrorTitle": "Error al enviar ánimo",
-    "teammate": "Compañero",
-    "brainLovers": "{{count}} BrainLover(s)",
-    "brainLoverCount": "{{count}} BrainLover(s) apoyando",
-    "brainLoversToggle": "Mostrar {{count}} BrainLover(s)",
+    "brainLoversLabel": "BrainLovers",
     "brainLoverBadge": "BrainLover",
-    "cheerAll": "Animar a Todos",
-    "recommendAll": "Recomendar a Todos",
-    "allTeammates": "Todos los Compañeros",
-    "leftTeam": "Equipo abandonado",
-    "leaveTeam": "Abandonar Equipo",
-    "leaveTeamConfirm": "¿Seguro que quieres abandonar \"{{name}}\"? Perderás tu rango de equipo y contribución de racha.",
-    "leaveError": "Error al abandonar el equipo",
-    "bulkCheerSent": "¡Equipo animado!",
-    "bulkCheerDesc": "Ánimos enviados a {{count}} compañeros."
-  },
-  "caregiverDashboard": {
-    "loading": "Cargando panel...",
-    "brainLoverPortal": "Panel",
-    "portalSubtitle": "Anima y apoya el viaje de movimiento diario de tu FreeBrainer.",
-    "inviteFreeBrainer": "Invitar FreeBrainer",
-    "bulkInvite": "Invitación Masiva",
-    "subAccount": "Subcuenta",
-    "freeBrainerLabel": "FreeBrainer:",
-    "selectFreeBrainer": "Seleccionar FreeBrainer",
-    "deletionWarning": "Advertencia de Eliminación de Cuenta",
-    "deletionWarningDesc": "Tu perfil no tiene un FreeBrainer vinculado. Tienes hasta",
-    "deletionWarningDesc2": "para vincular un FreeBrainer antes de que tu cuenta sea eliminada.",
-    "linkNow": "Vincular un FreeBrainer ahora →",
-    "noLinkedFreeBrainer": "Aún No Hay FreeBrainer Vinculado",
-    "noLinkedDesc": "Invita a tu FreeBrainer a conectarse y apoyar su viaje de movimiento.",
-    "createSubAccount": "Crear Subcuenta",
-    "tabYourFreeBrainer": "Tu FreeBrainer",
-    "tabFreeBrainerTeam": "Equipo del FreeBrainer",
-    "alreadyEncouraged": "Animado hoy ✓",
-    "boostPoints": "Impulsar Puntos",
-    "alreadyBoosted": "Impulsado hoy ✓",
-    "boostSentTitle": "¡Puntos Impulsados! ⚡ +50",
-    "boostSentDesc": "¡{{name}} ganó +50 Puntos FreeBrain!",
-    "encourageAndCheer": "Animar y Apoyar",
-    "raiseStanding": "Subir Nivel",
-    "remindToMove": "Recordar",
-    "toMove": "¡Moverse!",
-    "cheerMessage": "¡Sigue así {{name}}! ¡Tú puedes!",
-    "cheerSentToast": "¡Ánimo enviado! ❤️",
-    "cheerSentDesc": "¡Tu apoyo para {{name}} fue compartido!"
+    "brainLoverCount": "{{count}} BrainLovers apoyando",
+    "sosBadge": "SOS",
+    "supportersTitle": "Seguidores",
+    "supportsLabel": "Apoyando"
   },
   "encourageFlow": {
     "raiseTitle": "Subir Nivel de {{name}}",
@@ -1360,14 +1255,6 @@
     "encourage": "Animar",
     "boost": "Impulsar",
     "video": "Video"
-  },
-  "adminControls": {
-    "title": "Controles de Admin",
-    "subtitle": "Gestionar playlists, probar sesiones y reiniciar datos.",
-    "notAuthorized": "Se requiere acceso de administrador.",
-    "clearCacheTitle": "Borrar Todos los Cachés y Recargar",
-    "clearCacheDesc": "Borra localStorage, service workers y caché del navegador. La app se recargará inmediatamente.",
-    "clearCacheButton": "Borrar y Recargar"
   },
   "loveTheirBrain": {
     "title": "Amar Su Cerebro",
@@ -1545,20 +1432,6 @@
     "teamManagement": "Gestión de Equipo",
     "otherTeammates": "Otros Compañeros"
   },
-  "roster": {
-    "checkedIn": "Registrado",
-    "notYet": "Aún no",
-    "streak": "Racha",
-    "pts": "pts",
-    "brainLoversLabel": "BrainLovers",
-    "brainLoverBadge": "BrainLover",
-    "brainLoverCount": "{{count}} BrainLovers apoyando",
-    "sosBadge": "SOS"
-  },
-  "caregiverDashboard": {
-    "inviteAnotherFreeBrainer": "Invitar FreeBrainer",
-    "inviteBrainLover": "Invitar BrainLover"
-  },
   "inviteCaregiverModal": {
     "title": "Invitar a un BrainLover",
     "description": "Invita a alguien que pueda ayudarte a apoyar a tu FreeBrainer.",
@@ -1568,5 +1441,43 @@
     "sent": "¡Invitación enviada!",
     "sentDesc": "Se ha enviado una invitación a {{email}}",
     "error": "Error al enviar la invitación"
+  },
+  "inviteSearch": {
+    "label": "Añade a alguien que ya esté en FreeBrain",
+    "placeholder": "Busca por nombre o correo electrónico",
+    "connect": "Conectar",
+    "connecting": "Conectando...",
+    "searching": "Buscando...",
+    "startTyping": "Escribe al menos 2 letras para encontrarlos",
+    "noResults": "No se encontró a nadie con ese nombre o correo",
+    "alreadyOn": "Ya está en FreeBrain"
+  },
+  "roles": {
+    "user": "Usuario",
+    "freebrainer": "FreeBrainer",
+    "brainlover": "BrainLover",
+    "pro": "Pro"
+  },
+  "inviteBLChoice": {
+    "title": "Invitar a un BrainLover",
+    "subtitle": "¿A quién te gustaría invitar?",
+    "supportTitle": "Apoyar a mi FreeBrainer",
+    "supportDesc": "Invita a alguien para que te ayude a apoyar a {{name}}.",
+    "platformTitle": "Alguien con una afección cerebral",
+    "platformDesc": "Invita a alguien que quiera a una persona con una afección cerebral a unirse a FreeBrain y crear su propia cuenta de FreeBrainer.",
+    "emailLabel": "Su dirección de correo electrónico",
+    "sendInvite": "Enviar invitación",
+    "orByEmail": "o invita por correo",
+    "addCoSupporter": "Añadir como seguidor",
+    "platformSent": "¡Invitación enviada!",
+    "platformSentDesc": "Se envió una invitación a {{email}}. Completarán el proceso de incorporación de BrainLover para crear su propio FreeBrainer.",
+    "platformExistingTitle": "Ya está en FreeBrain",
+    "platformExistingDesc": "{{email}} ya tiene una cuenta de FreeBrain. Se envió un enlace a la aplicación.",
+    "supportSent": "¡Invitación enviada!",
+    "supportSentDesc": "Se envió una invitación para apoyar a {{name}} a {{email}}.",
+    "supportConnectedTitle": "¡Añadido como seguidor!",
+    "supportConnectedDesc": "{{name}} ahora puede ayudar a apoyar a {{patient}}.",
+    "noPatient": "No hay ningún FreeBrainer seleccionado para compartir.",
+    "error": "Error al enviar"
   }
 }

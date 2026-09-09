@@ -45,6 +45,8 @@ export interface OnboardingState {
   patientId: string | null;
   managementMode: "manage" | "independent" | null;
   subAccountPatientId: string | null;
+  // Found via the "Find your FreeBrainer" directory search (independent mode).
+  foundPatientId: string | null;
   // ── Sub-account form data (for re-creating in Supabase after auth) ──
   subAccountName?: string | null;
   subAccountConditions?: string | null;
@@ -129,6 +131,7 @@ export function useOnboardingSubmit({
           location: s.location,
           diagnosis_story: s.diagnosisStory,
           share_consent: s.shareConsent,
+          total_score: 0,
         };
 
         if (profileExists) {
@@ -214,6 +217,12 @@ export function useOnboardingSubmit({
             }
             const { data: codeTeam } = await query.maybeSingle();
             if (codeTeam) targetTeamId = (codeTeam as any).id;
+          }
+
+          // Join-team invites carry team_id in the URL. Prefer step state, then
+          // the team code, then the URL param (set by JoinTeam.tsx redirects).
+          if (!targetTeamId) {
+            targetTeamId = new URLSearchParams(window.location.search).get("team_id") || null;
           }
 
           if (targetTeamId && targetTeamId.startsWith("00000000-")) {
@@ -355,6 +364,7 @@ export function useOnboardingSubmit({
               connectionMethod: s.connectionMethod || null,
               managementMode: s.managementMode || null,
               subAccountPatientId: s.subAccountPatientId || null,
+              foundPatientId: s.foundPatientId || null,
               subAccountName: s.subAccountName || null,
               subAccountConditions: s.subAccountConditions || null,
               subAccountLocation: s.subAccountLocation || null,
@@ -411,6 +421,7 @@ export function useOnboardingSubmit({
           onboarding_completed: false, // ← flipped to true after sub-account succeeds
           avatar_url: s.photo || null,
           location: s.location || null,
+          total_score: 0,
         };
 
         if (profileExists) {
@@ -450,7 +461,7 @@ export function useOnboardingSubmit({
         // the sub-account was created in localStorage with a "dev-patient-*" ID.
         // Now that they have a real session, we re-create it in Supabase and
         // use the real UUID going forward.
-        let targetPatientId = s.subAccountPatientId || s.patientId || (overrideData ? overrideData.patientId : null);
+        let targetPatientId = s.subAccountPatientId || s.foundPatientId || s.patientId || (overrideData ? overrideData.patientId : null);
         let isDevPatientId = !!(targetPatientId && String(targetPatientId).startsWith("dev-patient-"));
 
         console.log("[FB-DEBUG] Sub-account re-create check:", {

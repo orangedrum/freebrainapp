@@ -134,6 +134,7 @@ export default function JoinTeam() {
         const params = new URLSearchParams();
         params.set("flow", effectiveRole === "caregiver" ? "brainlover" : "freebrainer");
         params.set("step", "2");
+        if (teamId) params.set("team_id", teamId);
         if (effectivePatientId) params.set("patient_id", effectivePatientId);
         if (effectiveCaregiverId) params.set("caregiver_id", effectiveCaregiverId);
         if (effectiveFbName) params.set("fb_name", effectiveFbName);
@@ -168,6 +169,7 @@ export default function JoinTeam() {
           params.set("flow", "brainlover");
           params.set("step", "2");
           params.set("patient_id", newPatientId);
+          if (teamId) params.set("team_id", teamId);
           if (effectiveRole) params.set("role", effectiveRole);
           if (effectiveFbName) params.set("fb_name", effectiveFbName);
           if (effectiveInviterName) params.set("inviter_name", effectiveInviterName);
@@ -228,6 +230,7 @@ export default function JoinTeam() {
             params.set("flow", "brainlover");
             params.set("step", "2");
             params.set("patient_id", newPatientId);
+            if (teamId) params.set("team_id", teamId);
             if (effectiveRole) params.set("role", effectiveRole);
             if (effectiveFbName) params.set("fb_name", effectiveFbName);
             if (effectiveInviterName) params.set("inviter_name", effectiveInviterName);
