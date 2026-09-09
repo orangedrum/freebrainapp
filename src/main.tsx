@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { AuthProvider } from "./contexts/AuthContext";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import "./i18n";
 import "./index.css";
@@ -13,8 +14,10 @@ const LoadingFallback = () => (
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
-    <Suspense fallback={<LoadingFallback />}>
-      <App />
-    </Suspense>
+    <AuthProvider>
+      <Suspense fallback={<LoadingFallback />}>
+        <App />
+      </Suspense>
+    </AuthProvider>
   </ErrorBoundary>,
 );

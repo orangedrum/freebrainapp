@@ -29,7 +29,8 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      let redirectTo = window.location.origin.includes("freethebrains.com") ? window.location.origin : "https://app.freethebrains.com";
+      // Always use current origin for redirect — all environments are whitelisted in Supabase
+      let redirectTo = window.location.origin;
       const pendingInvite = sessionStorage.getItem('pendingInvite');
       
       if (pendingInvite) {
@@ -41,7 +42,7 @@ export default function Auth() {
           if (invite.patientId) params.append('patient_id', invite.patientId);
           if (invite.role) params.append('role', invite.role);
           
-          redirectTo = `https://app.freethebrains.com/join?${params.toString()}`;
+          redirectTo = `${window.location.origin}/join?${params.toString()}`;
         } catch (e) {
           console.error("Failed to parse pending invite", e);
         }
