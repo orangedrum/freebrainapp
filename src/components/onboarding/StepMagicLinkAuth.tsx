@@ -53,9 +53,6 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
     setErrorMessage("");
 
     try {
-      // Smart redirect: if user is already onboarded with a role, send them
-      // to their dashboard. Otherwise send them back to /onboarding so the
-      // resume effect can complete the flow.
       const userRole = session?.user
         ? (await supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle())?.data?.role ?? null
         : null;
@@ -63,6 +60,21 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
         ? await supabase.from("profiles").select("onboarding_completed").eq("user_id", session.user.id).maybeSingle()
         : null;
       const alreadyOnboarded = !!userRole && !!(profileRes?.data as any)?.onboarding_completed;
+
+      // ── Verified session: no second email needed ──
+      // A session here means the user already proved their email (e.g. via the
+      // invite magic link). Calling onComplete() now triggers handleComplete /
+      // handleCompleteBrainLover which perform the Supabase writes immediately —
+      // no device-scoped pendingOnboarding detour, so finishing on one device
+      // never bounces the user back to the start of onboarding on another.
+      if (session?.user) {
+        if (alreadyOnboarded) {
+          window.location.href = getDefaultRouteForRole(userRole);
+        } else {
+          onComplete();
+        }
+        return;
+      }
 
       const redirectPath = alreadyOnboarded
         ? getDefaultRouteForRole(userRole)
@@ -80,10 +92,9 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
         setErrorMessage(error.message);
       } else {
         setEmailSent(true);
-        // Save onboarding state to localStorage so it can be resumed
-        // AFTER the user clicks the magic link and gets a session.
-        // We do NOT call onComplete here because that would try to write
-        // to Supabase without a verified session.
+        // No session yet (>email verification pending). Save onboarding state to
+        // localStorage so the resume effect completes the writes AFTER the user
+        // clicks the magic link and gets a verified session.
         onComplete();
       }
     } catch (err: any) {

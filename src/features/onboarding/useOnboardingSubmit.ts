@@ -82,12 +82,14 @@ export function useOnboardingSubmit({
         : state;
 
       try {
-        // ── Save pending onboarding if no session yet OR if called from the
-        //    auth step (no overrideData). The actual Supabase writes happen
-        //    ONLY when the resume effect fires after the user clicks their
-        //    magic link and returns with a verified session.
-        //    This prevents a stale session from bypassing email verification.
-        if (!session?.user || !overrideData) {
+        // ── Save pending onboarding ONLY when there is no session yet. ──
+        // A verified session means the user already proved ownership of their
+        // email (via the invite/magic-link round-trip), so we can perform the
+        // Supabase writes IMMEDIATELY. The pending→resume detour was being
+        // used even for authed users, which is device-scoped (localStorage) —
+        // clicking the email on a different device then bounced the user back
+        // to the start of onboarding forever.
+        if (!session?.user || (session.user.id === "dev-user-id" && !overrideData)) {
           localStorage.setItem(
             "pendingOnboarding",
             JSON.stringify({ flowType: "freebrainer", ...s, inviteCaregiverId: state.inviteCaregiverId })
@@ -346,12 +348,11 @@ export function useOnboardingSubmit({
       });
 
       try {
-        // ── Save pending onboarding if no session yet OR if called from the
-        //    auth step (no overrideData). The actual Supabase writes happen
-        //    ONLY when the resume effect fires after the user clicks their
-        //    magic link and returns with a verified session.
-        //    This prevents a stale session from bypassing email verification.
-        if (!session?.user || !overrideData) {
+        // ── Save pending onboarding ONLY when there is no session yet. ──
+        // Same rule as handleComplete: a verified session means the email is
+        // already proven, so complete the writes now instead of detouring
+        // through the device-scoped pending→resume path.
+        if (!session?.user || (session.user.id === "dev-user-id" && !overrideData)) {
           console.log("[FB-DEBUG] Saving pendingOnboarding (no session or auth-step call)");
           localStorage.setItem(
             "pendingOnboarding",
@@ -682,9 +683,15 @@ export function useOnboardingSubmit({
         if (flipErr) {
           console.error("[FB-DEBUG] Failed to set onboarding_completed=true:", flipErr.message);
           // Non-fatal — the user can still use the app, just might see onboarding again
+        } else {
+          // Clear any stale pendingOnboarding (from this device or another) so
+          // the route guard can never bounce a completed user back to onboarding.
+          localStorage.removeItem("pendingOnboarding");
         }
 
-        // NOTE: pendingOnboarding is removed by the caller (Onboarding.tsx) only on success.
+        // NOTE: pendingOnboarding is cleared below on success (and the caller
+        // clears it too) so no stale pending can keep bouncing a finished user
+        // back to onboarding.
         toast({
           title: t("onboarding.welcomeToastTitle"),
           description:
