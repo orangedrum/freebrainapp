@@ -10,11 +10,11 @@
  * @param onNext / onBack
  * @param speak
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Volume2, ChevronRight, ArrowLeft, Users, Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { Volume2, ChevronRight, ArrowLeft, Users, Mail, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,14 +71,15 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
   const [inviteEmail, setInviteEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const sendTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const name = freeBrainerName || t("onboarding.bl.yourFreeBrainer", "your FreeBrainer");
 
-  const handleSendInvite = async () => {
-    if (!inviteEmail.trim() || !inviteEmail.includes("@")) return;
+  const fireInvite = useCallback(async (email: string) => {
     setIsSending(true);
     try {
-      const result = await sendBrainLoverInvite(inviteEmail.trim(), {
+      const result = await sendBrainLoverInvite(email, {
         patientId: patientId || null,
         caregiverId,
         patientName: freeBrainerName || null,
@@ -97,25 +98,49 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
         return;
       }
 
+      setSentEmail(email);
       setInviteSent(true);
       toast({
         title: t("onboarding.bl.inviteSentTitle", "Invite sent!"),
         description: t("onboarding.bl.inviteSentDesc", {
-          email: inviteEmail.trim(),
-          defaultValue: `An invitation has been sent to ${inviteEmail.trim()}`,
+          email,
+          defaultValue: `An invitation has been sent to ${email}`,
         }),
       });
     } catch (e: any) {
       toast({
         title: t("onboarding.bl.invitePreparedTitle", "Invite prepared"),
         description: t("onboarding.bl.invitePreparedDesc", {
-          email: inviteEmail.trim(),
-          defaultValue: `We'll send an invitation to ${inviteEmail.trim()}`,
+          email,
+          defaultValue: `We'll send an invitation to ${email}`,
         }),
       });
     } finally {
       setIsSending(false);
     }
+  }, [patientId, caregiverId, freeBrainerName, patientAvatar, effectiveInviterName, toast, t]);
+
+  // Auto-send the invite as soon as a valid email is typed (debounced).
+  // Users reliably typed their BrainLover's email here but then used the big
+  // Continue button next — the invite was silently never sent.
+  useEffect(() => {
+    if (sendTimer.current) clearTimeout(sendTimer.current);
+    const email = inviteEmail.trim();
+    const isValidEmail = /\S+@\S+\.\S+/.test(email);
+    if (!isValidEmail || isSending || email === sentEmail) return;
+    sendTimer.current = setTimeout(() => {
+      void fireInvite(email);
+    }, 800);
+    return () => {
+      if (sendTimer.current) clearTimeout(sendTimer.current);
+    };
+  }, [inviteEmail, isSending, sentEmail, fireInvite]);
+
+  // Allow inviting a second BrainLover after the first one is sent.
+  const startAnotherInvite = () => {
+    setInviteEmail("");
+    setSentEmail(null);
+    setInviteSent(false);
   };
 
   return (
@@ -169,6 +194,13 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
           <p className="text-base font-medium text-foreground">
             {t("onboarding.bl.inviteSentConfirm", "Invitation sent! They'll join you soon.")}
           </p>
+          <button
+            type="button"
+            onClick={startAnotherInvite}
+            className="text-base text-primary hover:underline underline-offset-4 py-2 px-4 min-h-[44px]"
+          >
+            {t("onboarding.bl.inviteAnother", "Invite another BrainLover")}
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -176,22 +208,18 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
             <Mail className="h-4 w-4 text-primary" />
             {t("onboarding.bl.inviteBrainLover", "Invite a BrainLover by email")}
           </Label>
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="name@example.com"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              className="h-14 text-lg border-2 flex-1"
-            />
-            <Button
-              className="h-14 px-4 shrink-0"
-              disabled={!inviteEmail.trim() || !inviteEmail.includes("@") || isSending}
-              onClick={handleSendInvite}
-            >
-              {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : t("onboarding.bl.send", "Send")}
-            </Button>
-          </div>
+          <Input
+            type="email"
+            placeholder="name@example.com"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            className="h-14 text-lg border-2"
+          />
+          <p className="text-sm text-muted-foreground">
+            {isSending
+              ? t("onboarding.bl.sending", "Sending invitation...")
+              : t("onboarding.bl.autoSendHint", "We'll send the invitation as soon as you finish typing the email.")}
+          </p>
         </div>
       )}
 

@@ -660,6 +660,9 @@
       "invitePreparedDesc": "Wir senden eine Einladung an {{email}}",
       "inviteSentConfirm": "Einladung gesendet! Sie werden bald dabei sein.",
       "inviteBrainLover": "BrainLover per E-Mail einladen",
+      "inviteAnother": "Einen weiteren BrainLover einladen",
+      "sending": "Einladung wird gesendet...",
+      "autoSendHint": "Wir senden die Einladung, sobald du die E-Mail fertig eingetippt hast.",
       "send": "Senden",
       "continueToSetup": "Weiter zur Kontoeinrichtung",
       "skipForNow": "Vorerst überspringen"

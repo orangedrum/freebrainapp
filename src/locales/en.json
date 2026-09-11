@@ -430,6 +430,9 @@
       "invitePreparedDesc": "We'll send an invitation to {{email}}",
       "inviteSentConfirm": "Invitation sent! They'll join you soon.",
       "inviteBrainLover": "Invite a BrainLover by email",
+      "inviteAnother": "Invite another BrainLover",
+      "sending": "Sending invitation...",
+      "autoSendHint": "We'll send the invitation as soon as you finish typing the email.",
       "send": "Send",
       "continueToSetup": "Continue to Account Setup",
       "skipForNow": "Skip for now"
