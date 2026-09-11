@@ -153,17 +153,28 @@ export default function Onboarding() {
     inviterName: urlInviterName,
     kind: inviteKind,
   });
-  const resolvedFlow = urlFlow || inviteIntent.flow;
-  const [step, setStep] = useState(initialStep);
+  // ── Invariant: an existing FreeBrainer is pinned ⇒ the invitee is a
+  //    secondary BrainLover. They ALWAYS get the invited BrainLover onboarding
+  //    (never FreeBrainer setup, never the role picker) — enforced here so it
+  //    holds regardless of which caller sent the invite (teams, love, onboarding).
+  const pinnedToExistingFb = inviteIntent.kind === "support_existing_fb";
+  const resolvedFlow = pinnedToExistingFb ? "brainlover" : (urlFlow || inviteIntent.flow);
+  const startStep = pinnedToExistingFb ? Math.max(2, initialStep) : initialStep;
+  const [step, setStep] = useState(startStep);
   const [flowType, setFlowType] = useState<"freebrainer" | "brainlover">(resolvedFlow);
   const [patientInfo, setPatientInfo] = useState<{ name: string; avatar: string | null } | null>(null);
 
-  // Update flowType when patientId resolves from async sources (Supabase table, etc.)
+  // Update flowType when patientId resolves from async sources (Supabase table, etc.).
+  // A pinned existing FreeBrainer always forces the BrainLover flow — even when
+  // a stale URL `flow=freebrainer` contradicts it — and skips past role selection.
   useEffect(() => {
-    if (patientId && flowType !== "brainlover" && !urlFlow) {
-      setFlowType("brainlover");
+    if (patientId && flowType !== "brainlover") {
+      if (pinnedToExistingFb || !urlFlow) {
+        setFlowType("brainlover");
+        if (pinnedToExistingFb && step < 2) setStep(2);
+      }
     }
-  }, [patientId, flowType, urlFlow]);
+  }, [patientId, flowType, urlFlow, pinnedToExistingFb, step]);
 
   // ── FreeBrainer state ──
   const [conditions, setConditions] = useState<string[]>([]);

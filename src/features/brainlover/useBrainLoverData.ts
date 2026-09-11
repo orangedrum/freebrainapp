@@ -183,10 +183,13 @@ export function useBrainLoverData(userId: string | undefined) {
         if (stillMissingIds.length > 0 && userId) {
           try {
             const { fetchInviteContextByEmail } = await import("@/lib/brainloverInvites");
-            // Use the caregiver's email to find their invite context
-            const { data: ownProfile } = await supabase.from("profiles").select("email").eq("user_id", userId).maybeSingle();
-            if (ownProfile?.email) {
-              const ctx = await fetchInviteContextByEmail(ownProfile.email);
+            // Use the SIGNED-IN user's email (canonical source from auth) to find
+            // their invite context. profiles.email is populated only by migration 18's
+            // one-time backfill, so it can be NULL for newly onboarded caregivers.
+            const { data: authData } = await supabase.auth.getUser();
+            const authEmail = authData?.user?.email;
+            if (authEmail) {
+              const ctx = await fetchInviteContextByEmail(authEmail);
               if (ctx?.patientId && stillMissingIds.includes(ctx.patientId)) {
                 managedMap[ctx.patientId] = {
                   display_name: ctx.patientName || undefined,

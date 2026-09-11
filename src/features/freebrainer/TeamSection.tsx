@@ -41,6 +41,7 @@ import { RecommendVideoModal } from "@/components/shared/RecommendVideoModal";
 import { BulkRecommendModal } from "@/features/freebrainer/BulkRecommendModal";
 import { LeaveTeamButton } from "@/features/freebrainer/LeaveTeamButton";
 import { InviteTeammateModal } from "@/components/profile/InviteTeammateModal";
+import { useSelfProfile } from "@/features/freebrainer/useSelfProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,6 +49,7 @@ export function TeamSection() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { displayName: selfName, avatarUrl: selfAvatar } = useSelfProfile();
   const { team, loading: teamLoading, refresh: refreshTeam } = useTeamProfile();
   const { teams: rankedTeams, loading: leaderboardLoading } = useLeaderboardData();
   const { members, supporters, brainLoversByMember, loading: rosterLoading, refresh: refreshRoster } =
@@ -320,7 +322,8 @@ export function TeamSection() {
         onOpenChange={setInviteOpen}
         team={{ id: team.id, name: team.name, code: team.code }}
         patientId={user?.id || null}
-        patientName={(user?.user_metadata as { name?: string } | undefined)?.name || null}
+        patientName={selfName}
+        patientAvatar={selfAvatar}
       />
 
       <RecommendVideoModal

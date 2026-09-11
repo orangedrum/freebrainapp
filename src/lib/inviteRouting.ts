@@ -56,9 +56,15 @@ const FLOWS = {
 /**
  * Reduce a resolved invite route (URL params + recovered context) to a single
  * intent. `kind` wins when present; legacy links are classified by heuristics:
- *  - patient context  → supporting an existing FreeBrainer
+ *  - patient context  → supporting an EXISTING FreeBrainer
  *  - caregiver only   → joining as a FreeBrainer (legacy InviteFreeBrainerModal)
  *  - everything else  → team-only join
+ *
+ * INVARIANT: whenever an existing FreeBrainer is pinned (patientId present),
+ * the invitee is by definition a SECONDARY BrainLover and always enters the
+ * invited BrainLover onboarding (7 steps, step 2 shows the FreeBrainer's
+ * picture) — never the primary flow that creates/connects a FreeBrainer they
+ * already have. Onboarding.tsx enforces the same rule at rendering time.
  */
 export function computeInviteIntent(input: InviteRouteInput): InviteIntent {
   let kind = input.kind;
@@ -67,6 +73,8 @@ export function computeInviteIntent(input: InviteRouteInput): InviteIntent {
     if (input.patientId) kind = "support_existing_fb";
     else if (input.caregiverId) kind = "join_as_freebrainer";
     else kind = "team_only";
+  } else if (input.patientId && (kind === "team_only" || kind === "join_as_brainlover")) {
+    kind = "support_existing_fb";
   }
 
   const meta = FLOWS[kind] ?? FLOWS.team_only;

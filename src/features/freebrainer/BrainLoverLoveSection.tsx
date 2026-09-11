@@ -27,6 +27,7 @@ import { Heart, Bell, Video, Play, X, UserPlus } from "lucide-react";
 import { useLoveInteractions, type LoveItem } from "@/features/freebrainer/useLoveInteractions";
 import { useConnectedBrainLovers } from "@/features/freebrainer/useConnectedBrainLovers";
 import { InviteCaregiverModal } from "@/components/profile/InviteCaregiverModal";
+import { useSelfProfile } from "@/features/freebrainer/useSelfProfile";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface BrainLoverLoveSectionProps {
@@ -38,6 +39,7 @@ interface BrainLoverLoveSectionProps {
 export function BrainLoverLoveSection({ userId, onWatchVideo }: BrainLoverLoveSectionProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { displayName: selfName, avatarUrl: selfAvatar } = useSelfProfile();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const { items, loading, dismiss } = useLoveInteractions(userId, null);
   const { brainLovers } = useConnectedBrainLovers(userId);
@@ -152,6 +154,9 @@ export function BrainLoverLoveSection({ userId, onWatchVideo }: BrainLoverLoveSe
         onClose={() => setShowInviteModal(false)}
         userId={user?.id || ""}
         userRole="freebrainer"
+        patientId={user?.id || undefined}
+        patientName={selfName || undefined}
+        patientAvatar={selfAvatar}
       />
     </Card>
   );

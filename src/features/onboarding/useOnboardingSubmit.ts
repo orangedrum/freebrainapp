@@ -128,6 +128,7 @@ export function useOnboardingSubmit({
 
         const profileData = {
           display_name: s.displayName || session.user.email?.split("@")[0] || "FreeBrainer",
+          email: session.user.email || null,
           onboarding_completed: true,
           avatar_url: s.photo,
           location: s.location,
@@ -417,6 +418,7 @@ export function useOnboardingSubmit({
 
         const profileData = {
           display_name: s.displayName || session.user.email?.split("@")[0] || t("roles.brainlover"),
+          email: session.user.email || null,
           caregiver_type: s.caregiverType,
           facility_id: s.facility || null,
           onboarding_completed: false, // ← flipped to true after sub-account succeeds

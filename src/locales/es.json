@@ -220,6 +220,8 @@
     "support": "Soporte",
     "community": "Comunidad",
     "profile": "Yo",
+    "love": "Amor",
+    "wall": "Muro",
     "caregiver": "Portal BrainLover",
     "pro": "Panel Pro",
     "adminControls": "Controles de Admin"
@@ -248,7 +250,9 @@
   "onboarding": {
     "alreadyHaveAccount": "Ya tengo una cuenta",
     "back": "Atrás",
+    "continue": "Continuar",
     "next": "Siguiente",
+    "doLater": "Lo haré después",
     "skip": "Omitir por ahora",
     "symptomsTitle": "¿En qué parámetros de bienestar te estás enfocando hoy?",
     "symptomsSubtitle": "Selecciona metas de bienestar general. Los parámetros de dispositivos clínicos se sincronizan automáticamente vía wearables.",
@@ -268,11 +272,16 @@
     },
     "step2": {
       "title": "¿Qué te trae a FreeBrain?",
+      "label": "Mi(s) Condición(es)",
+      "search": "Buscar o escribir una nueva condición...",
+      "add": "Añadir \"{{condition}}\"",
       "searchPlaceholder": "Buscar condiciones...",
       "mobilityLabel": "¿Cómo te sientes de movilidad hoy?"
     },
     "step3": {
-      "title": "¿Con qué síntomas luchas más hoy?",
+      "title": "¿Cómo se siente tu movilidad últimamente?",
+      "restricted": "Muy Restringida",
+      "mobile": "Muy Móvil",
       "placeholder": "Describe cómo te sientes o usa el micrófono...",
       "processing": "Analizando síntomas...",
       "confirmTitle": "¿Entendimos bien?",
@@ -280,35 +289,68 @@
       "tryAgain": "Intentar de nuevo"
     },
     "step4": {
-      "title": "Ancla de Hábito",
+      "title": "¿Con qué síntomas luchas más hoy?",
+      "placeholder": "Ej., rigidez en las piernas, niebla mental, fatiga...",
+      "analyzing": "Analizando...",
       "question": "En una semana típica, ¿cuántos días realizas movimiento intencional beneficioso para el cerebro?"
     },
     "step5": {
-      "title": "Conócenos",
+      "title": "¿Lo hicimos bien?",
+      "youSaid": "Tú dijiste:",
+      "weTrack": "Rastrearemos esto por ti:",
+      "addAnother": "Añadir otro síntoma...",
+      "looksGood": "Se Ve Bien",
+      "tryAgain": "Intentar de nuevo",
       "photoTitle": "Añade una foto de perfil",
       "photoDesc": "¡Deja que otros FreeBrainers conozcan tu cara!",
       "locationPlaceholder": "Busca tu ciudad..."
     },
     "step6": {
-      "title": "Encuentra a tu gente",
+      "title": "¿Te gustaría recibir apoyo?",
+      "invite": "Invitar a un BrainLover",
+      "inviteDesc": "Un cuidador, amigo o familiar puede seguir tu progreso y animarte.",
+      "emailLabel": "Su Correo Electrónico",
+      "emailPlaceholder": "brainlover@ejemplo.com",
+      "sendInvite": "Enviar Invitación",
       "teamCodePlaceholder": "Ingresa código de equipo",
       "openTeams": "Equipos Abiertos",
       "commonConditions": "Condiciones comunes:"
     },
     "step7": {
-      "title": "Conecta tu dispositivo inteligente",
+      "title": "En una semana típica, ¿cuántos días realizas movimiento intencional beneficioso para el cerebro?",
+      "days": "días",
       "desc": "Conecta tu dispositivo para check-ins automáticos.",
       "apple": "Apple Health",
       "google": "Google Fit",
       "other": "Otro Dispositivo"
     },
     "step8": {
-      "title": "Consentimiento de la Comunidad",
+      "title": "Deja que otros FreeBrainers conozcan tu cara",
+      "addPhoto": "Añadir Foto",
+      "locationLabel": "¿Dónde te encuentras?",
+      "locationPlaceholder": "Ciudad, Estado o País...",
       "subtitle": "Inspira el compromiso con otros FreeBrainers permitiendo esta función.",
       "desc": "¿Podemos compartir automáticamente tu racha de check-ins y tu historia de diagnóstico en el Muro de FreeBrain para inspirar a otros? Puedes cambiar esto en cualquier momento."
     },
     "step9": {
-      "title": "Comparte tu historia",
+      "title": "Encuentra a tu gente",
+      "teamCode": "¿Tienes un Código de Equipo?",
+      "codePlaceholder": "Ingresa el código...",
+      "openTeam": "O únete a un Equipo Abierto",
+      "joinContinue": "Unirse y Continuar",
+      "storyPlaceholder": "Comparte un poco sobre tu viaje hasta ahora..."
+    },
+    "step10": {
+      "title": "Conecta tu dispositivo inteligente",
+      "desc": "Registra automáticamente tus días de movimiento sin tener que abrir la app."
+    },
+    "step11": {
+      "title": "Comparte Tu Viaje",
+      "consentTitle": "Consentimiento de la Comunidad (HIPAA)",
+      "consentSubtitle": "Inspira el compromiso con otros FreeBrainers permitiendo esta función.",
+      "consentDesc": "¿Podemos compartir automáticamente tu check-in, rachas, ánimos, solicitudes de apoyo e historia de diagnóstico en el Muro de FreeBrain para inspirar a otros? Puedes cambiar esto en cualquier momento.",
+      "shareLabel": "Compartir en el Muro de FreeBrain",
+      "storyLabel": "Mi Historia de Diagnóstico (Opcional)",
       "storyPlaceholder": "Comparte un poco sobre tu viaje hasta ahora..."
     },
     "step12": {

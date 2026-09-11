@@ -21,12 +21,18 @@ export default function JoinTeam() {
   const fbName = searchParams.get("fb_name");
   const inviterName = searchParams.get("inviter_name");
   const kind = searchParams.get("kind") as InviteKind | null;
-  
+
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
     const processInvite = async () => {
       if (isLoading) return;
+
+      console.log("[FB-DEBUG] JoinTeam: URL params", {
+        href: window.location.href,
+        search: window.location.search,
+        teamId, caregiverId, patientId, fbName, inviterName, kind,
+      });
 
       // ── Recover invite context from ALL possible sources ──
       // Supabase magic links strip query params from the redirect URL.
