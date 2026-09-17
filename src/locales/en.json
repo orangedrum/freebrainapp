@@ -429,6 +429,7 @@
       "invitePreparedTitle": "Invite prepared",
       "invitePreparedDesc": "We'll send an invitation to {{email}}",
       "inviteSentConfirm": "Invitation sent! They'll join you soon.",
+      "invitePreparedConfirm": "Invite prepared! We'll send it right after you confirm your account.",
       "inviteBrainLover": "Invite a BrainLover by email",
       "inviteAnother": "Invite another BrainLover",
       "sending": "Sending invitation...",

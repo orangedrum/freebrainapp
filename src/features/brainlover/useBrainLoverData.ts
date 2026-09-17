@@ -139,6 +139,22 @@ export function useBrainLoverData(userId: string | undefined) {
         }
       }
 
+      // ── Self-heal for invited BrainLovers ──
+      // Pre-verification-era invites could not resolve the patient, so the
+      // invitee's onboarding skipped the caregiver_links insert: the dashboard
+      // looked empty and proxy check-ins were rejected by RLS/trigger. Recreate
+      // the missing link from the invite context (single source of truth) so the
+      // FreeBrainer shows up and the check-in write is allowed.
+      try {
+        const { ensureInvitedCaregiverLink } = await import("@/lib/brainloverInvites");
+        const ensured = await ensureInvitedCaregiverLink(userId);
+        if (ensured && !patientIds.includes(ensured.patientId)) {
+          patientIds.push(ensured.patientId);
+        }
+      } catch (e) {
+        console.warn("[FB-DEBUG] ensureInvitedCaregiverLink on dashboard load (non-fatal):", e);
+      }
+
       if (patientIds.length > 0) {
         const { data: pProfiles } = await supabase
           .from("profiles")

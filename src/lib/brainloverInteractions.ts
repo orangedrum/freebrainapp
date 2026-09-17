@@ -69,25 +69,38 @@ export async function sendBrainLoverInteraction(
 
   // 1. Write to Supabase community_posts as a high-visibility cheer post
   //    Skip in dev-bypass mode — IDs are not valid UUIDs.
+  //    Capture the Supabase id so the local list item and the DB row
+  //    share the SAME id — otherwise dismiss/fetch dedup can't match.
+  let supabaseId: string | null = null;
   if (!isDevBypassUser(patientId) && !isDevBypassUser(senderId)) {
     try {
       const postContent = `❤️ ${title}\n"${message}"\n— ${senderName}`;
-      await safeSupabaseQuery(() =>
-        (supabase.from("community_posts") as any).insert([
-          {
-            user_id: patientId,
-            posted_by_id: senderId,
-            author_name: senderName,
-            type: `brainlover_${type}`,
-            post_type: `brainlover_${type}`,
-            content: postContent,
-            created_at: now,
-          },
-        ])
+      const { data: inserted } = await safeSupabaseQuery<{ id: string }>(() =>
+        (supabase.from("community_posts") as any)
+          .insert([
+            {
+              user_id: patientId,
+              posted_by_id: senderId,
+              author_name: senderName,
+              type: `brainlover_${type}`,
+              post_type: `brainlover_${type}`,
+              content: postContent,
+              created_at: now,
+            },
+          ])
+          .select("id")
+          .single()
       );
+      if (inserted?.id) { supabaseId = inserted.id; }
     } catch (e) {
       console.warn("Supabase interaction insert fallback:", e);
     }
+  }
+
+  // 1b. Use the Supabase post id for the local list item so dismiss
+  //     and fetch share the same id (they currently differ: bl_act_... vs uuid).
+  if (supabaseId) {
+    interaction.id = supabaseId;
   }
 
   // 2. Persist in local storage keys for multi-key backup
@@ -132,15 +145,22 @@ export async function sendBrainLoverInteraction(
 export async function fetchBrainLoverInteractions(patientId: string): Promise<BrainLoverInteraction[]> {
   const interactions: BrainLoverInteraction[] = [];
 
-  // 1. Load from unified local storage cache first
+  // 1. Load from unified local storage cache first (ALL items,
+  //    including dismissed, so we can dedup Supabase posts against
+  //    them and keep dismissed items from re-appearing on reload).
+  let allParsed: BrainLoverInteraction[] = [];
   try {
     const listKey = `fb_brainlover_interactions_${patientId}`;
     const existingListStr = localStorage.getItem(listKey);
     if (existingListStr) {
-      const parsed: BrainLoverInteraction[] = JSON.parse(existingListStr);
-      interactions.push(...parsed.filter((item) => !item.dismissed));
+      allParsed = JSON.parse(existingListStr);
+      // Display: non-dismissed local items only
+      interactions.push(...allParsed.filter((item) => !item.dismissed));
     }
   } catch (e) {}
+
+  // Build a set of dismissed local ids for Supabase dedup
+  const dismissedIds = new Set(allParsed.filter((item) => item.dismissed).map((item) => item.id));
 
   // 2. Check legacy storage keys if unified list was empty
   if (interactions.length === 0) {
@@ -194,8 +214,13 @@ export async function fetchBrainLoverInteractions(patientId: string): Promise<Br
 
         if (posts && Array.isArray(posts)) {
           posts.forEach((p) => {
+            // Skip if this interaction was dismissed
+            if (dismissedIds.has(p.id)) return;
             const typeStr = (p.type || "").replace("brainlover_", "") as 'poke' | 'recommend_video' | 'cheer';
-            const exists = interactions.some((item) => item.id === p.id || item.created_at === p.created_at);
+            // Dedup by id only — local list items now carry the
+            // Supabase id (see sendBrainLoverInteraction 1b), so
+            // dismissed items stay dismissed instead of re-appearing.
+            const exists = interactions.some((item) => item.id === p.id);
             if (!exists) {
               interactions.push({
                 id: p.id,

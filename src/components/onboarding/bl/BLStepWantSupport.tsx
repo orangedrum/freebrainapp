@@ -72,6 +72,7 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
   const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const [wasDeferred, setWasDeferred] = useState(false);
   const sendTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const name = freeBrainerName || t("onboarding.bl.yourFreeBrainer", "your FreeBrainer");
@@ -100,12 +101,20 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
 
       setSentEmail(email);
       setInviteSent(true);
+      setWasDeferred(!!result.deferred);
       toast({
-        title: t("onboarding.bl.inviteSentTitle", "Invite sent!"),
-        description: t("onboarding.bl.inviteSentDesc", {
-          email,
-          defaultValue: `An invitation has been sent to ${email}`,
-        }),
+        title: result.deferred
+          ? t("onboarding.bl.invitePreparedTitle", "Invite prepared")
+          : t("onboarding.bl.inviteSentTitle", "Invite sent!"),
+        description: result.deferred
+          ? t("onboarding.bl.invitePreparedDesc", {
+              email,
+              defaultValue: `We'll send an invitation to ${email} after you confirm your account.`,
+            })
+          : t("onboarding.bl.inviteSentDesc", {
+              email,
+              defaultValue: `An invitation has been sent to ${email}`,
+            }),
       });
     } catch (e: any) {
       toast({
@@ -141,6 +150,7 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
     setInviteEmail("");
     setSentEmail(null);
     setInviteSent(false);
+    setWasDeferred(false);
   };
 
   return (
@@ -192,7 +202,14 @@ export const BLStepWantSupport: React.FC<BLStepWantSupportProps> = ({
         <div className="bg-success/10 border-2 border-success/30 rounded-2xl p-6 flex flex-col items-center gap-3 text-center">
           <CheckCircle2 className="h-10 w-10 text-success" />
           <p className="text-base font-medium text-foreground">
-            {t("onboarding.bl.inviteSentConfirm", "Invitation sent! They'll join you soon.")}
+            {t(
+              wasDeferred
+                ? "onboarding.bl.invitePreparedConfirm"
+                : "onboarding.bl.inviteSentConfirm",
+              wasDeferred
+                ? { email: sentEmail ?? "", defaultValue: "Invite prepared! We'll send it right after you confirm your account." }
+                : { defaultValue: "Invitation sent! They'll join you soon." }
+            )}
           </p>
           <button
             type="button"

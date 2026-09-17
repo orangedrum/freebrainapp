@@ -29,7 +29,6 @@ import { useLocationSearch } from "@/features/onboarding/useLocationSearch";
 import { usePhotoUpload } from "@/features/onboarding/usePhotoUpload";
 import type { ManagementMode } from "./BLStepManagementMode";
 import { ensureSameTeam } from "@/features/shared/useSubAccountCreate";
-import { getOtpRedirectUrl } from "@/lib/otpRedirect";
 
 interface BLStepConnectFreeBrainerProps {
   managementMode: ManagementMode;
@@ -183,7 +182,7 @@ export const BLStepConnectFreeBrainer: React.FC<BLStepConnectFreeBrainerProps> =
     }
   };
 
-  const handleSendInvite = async () => {
+  const handleSendInvite = () => {
     if (!patientEmail.trim() || !patientEmail.includes("@")) {
       toast({
         title: t("inviteModal.invalidEmailTitle", "Invalid email"),
@@ -193,33 +192,15 @@ export const BLStepConnectFreeBrainer: React.FC<BLStepConnectFreeBrainerProps> =
       return;
     }
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: patientEmail.trim(),
-        options: {
-          emailRedirectTo: getOtpRedirectUrl(`/join?caregiver_id=${caregiverId}&role=freebrainer`),
-          shouldCreateUser: true,
-        },
-      });
-
-      if (error) {
-        console.warn("Invite error:", error.message);
-        toast({ title: "Invite failed", description: error.message, variant: "destructive" });
-        return;
-      }
-
-      toast({
-        title: t("inviteModal.inviteSentTitle", "Invite sent!"),
-        description: t("inviteModal.inviteSentDesc", { email: patientEmail.trim() }),
-      });
-      onNext();
-    } catch (e: any) {
-      toast({
-        title: t("inviteModal.invitePreparedTitle", "Invite prepared"),
-        description: t("inviteModal.invitePreparedDesc", { email: patientEmail.trim() }),
-      });
-      onNext();
-    }
+    // The FreeBrainer is NEVER emailed from this step: the BrainLover has not
+    // confirmed/verified their account yet, so sending here would attach the
+    // invite to an unconfirmed placeholder account. handleCompleteBrainLover
+    // sends the real invite with the confirmed caregiver id after auth.
+    toast({
+      title: t("inviteModal.invitePreparedTitle", "Invite prepared"),
+      description: t("inviteModal.invitePreparedDesc", { email: patientEmail.trim() }),
+    });
+    onNext();
   };
 
   return (

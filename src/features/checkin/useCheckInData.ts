@@ -383,18 +383,58 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
             : checkinStatus === "rest_day" ? "Rest Day" : "Flare-Up",
         };
 
-        if (hasCheckedInToday) {
+        // The BrainLover's own auth session is used for RLS — the override only
+        // changes the user_id written to daily_checkins. `writeUserId` may be
+        // healed from a stale id by the self-heal below.
+        let writeUserId = effectiveUserId;
+        const attemptCheckInWrite = async (targetUserId: string) => {
+          if (hasCheckedInToday) {
+            const { error } = await (supabase.from("daily_checkins") as any)
+              .update(checkinData)
+              .eq("user_id", targetUserId)
+              .eq("checkin_date", today);
+            return error;
+          }
           const { error } = await (supabase.from("daily_checkins") as any)
-            .update(checkinData)
-            .eq("user_id", effectiveUserId)
-            .eq("checkin_date", today);
-          if (error) throw error;
-        } else {
-          const { error } = await (supabase.from("daily_checkins") as any)
-            .insert({ user_id: effectiveUserId, checkin_date: today, ...checkinData });
-          if (error) throw error;
-          setHasCheckedInToday(true);
+            .insert({ user_id: targetUserId, checkin_date: today, ...checkinData });
+          return error;
+        };
+
+        let writeError: any = await attemptCheckInWrite(writeUserId);
+
+        // ── Self-heal for invited BrainLovers ──
+        // An invited BL whose caregiver_links row is missing (pre-verification
+        // invite era) or points at a recreated sub-account gets the proxy write
+        // rejected here ("row-level security" / "does not exist"). Repair the
+        // link from the invite context (single source of truth), clean up ghost
+        // links, and retry once before surfacing the error.
+        if (writeError && overrideUserId && user?.id && !isTestingBypass) {
+          try {
+            const { ensureInvitedCaregiverLink } = await import("@/lib/brainloverInvites");
+            const ensured = await ensureInvitedCaregiverLink(user.id);
+            if (ensured) {
+              if (ensured.patientId !== writeUserId) {
+                await (supabase.from("caregiver_links") as any)
+                  .delete()
+                  .eq("caregiver_id", user.id)
+                  .eq("patient_id", writeUserId);
+              }
+              writeUserId = ensured.patientId;
+            } else if (writeError?.message?.includes("does not exist")) {
+              // Truly orphaned patient identity — stop surfacing it so the
+              // dashboard reloads without the ghost.
+              await (supabase.from("caregiver_links") as any)
+                .delete()
+                .eq("caregiver_id", user.id)
+                .eq("patient_id", writeUserId);
+            }
+          } catch (e) {
+            console.warn("[FB-DEBUG] Check-in self-heal error (non-fatal):", e);
+          }
+          writeError = await attemptCheckInWrite(writeUserId);
         }
+        if (writeError) throw writeError;
+        setHasCheckedInToday(true);
 
         // ── Also write the notes/activity to activity_log ──
         // This ensures the check-in activity shows up in the timeline,
@@ -403,8 +443,8 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
           try {
             const { error: logErr } = await safeSupabaseQuery(() =>
               (supabase.from("activity_log") as any).insert({
-                freebrainer_id: effectiveUserId,
-                brainlover_id: user?.id || effectiveUserId,
+                freebrainer_id: writeUserId,
+                brainlover_id: user?.id || writeUserId,
                 content: notes.trim(),
               })
             );
@@ -422,8 +462,8 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
         // For managed sub-accounts (no profiles row), addFreeBrainPoints
         // silently affects 0 rows — that's OK, the check-in itself still
         // succeeds and the score is tracked in daily_checkins.points_earned.
-        if (earned > 0 && effectiveUserId) {
-          addFreeBrainPoints(effectiveUserId, earned).catch((e) =>
+        if (earned > 0 && writeUserId) {
+          addFreeBrainPoints(writeUserId, earned).catch((e) =>
             console.warn("[FB-DEBUG] Score increment after check-in failed:", e)
           );
 
@@ -436,8 +476,8 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
               : (overrideUserId ? "Tested Their Brain" : "Tested My Brain");
           const userName = effectiveEmail?.split("@")[0] || "FreeBrainer";
           postToWall({
-            userId: effectiveUserId,
-            postedById: user?.id || effectiveUserId,
+            userId: writeUserId,
+            postedById: user?.id || writeUserId,
             authorName: userName,
             type: "checkin",
             content: `${statusEmoji} ${userName} ${statusLabel.toLowerCase()} today! +${earned} pts`,

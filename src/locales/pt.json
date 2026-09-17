@@ -659,6 +659,7 @@
       "invitePreparedTitle": "Convite preparado",
       "invitePreparedDesc": "Enviaremos um convite para {{email}}",
       "inviteSentConfirm": "Convite enviado! Eles se juntarão a você em breve.",
+      "invitePreparedConfirm": "Convite preparado! Enviaremos logo depois que você confirmar sua conta.",
       "inviteBrainLover": "Convidar um BrainLover por e-mail",
       "inviteAnother": "Convidar outro BrainLover",
       "sending": "Enviando convite...",

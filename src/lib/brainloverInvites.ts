@@ -13,6 +13,7 @@
  */
 import { supabase, safeSupabaseQuery } from "@/lib/supabase";
 import { getOtpRedirectUrl } from "@/lib/otpRedirect";
+import { isDevBypassMode } from "@/lib/devBypass";
 import type { InviteKind } from "@/lib/inviteRouting";
 
 const PROD_JOIN_URL = "https://app.freethebrains.com/join";
@@ -30,6 +31,11 @@ export interface InviteContext {
 export interface SendInviteResult {
   success: boolean;
   error?: string;
+  /** True when the invite was NOT emailed yet because the inviter has not
+   *  confirmed/verified their own account. The invite is parked in the
+   *  deferred queue and flushed the first time the inviter verifies
+   *  (see flushDeferredBrainLoverInvites). */
+  deferred?: boolean;
 }
 
 /**
@@ -42,8 +48,10 @@ export interface SendInviteResult {
  *
  * Side effects:
  *  - Persists invite context to localStorage (email-specific + generic key)
- *  - Adds email to the patient's invite list (for "Reinvite" CTA)
- *  - Dispatches "fb-invite-sent" window event
+ *  - If the inviter is NOT confirmed/verified yet: parks the invite in the
+ *    deferred queue and returns { success, deferred: true } WITHOUT emailing.
+ *  - Otherwise: adds email to the patient's invite list (for "Reinvite" CTA),
+ *    upserts Supabase, sends the OTP and dispatches "fb-invite-sent".
  */
 export interface InviteSendOptions {
   /** When set, appends team_id to the magic-link redirect so the invitee
@@ -87,6 +95,146 @@ export function buildJoinLink(params: JoinLinkParams): string {
   return query ? `${base}?${query}` : base;
 }
 
+/**
+ * Is the inviter confirmed & verified on their own account?
+ *
+ * The app only authenticates via magic links, so a real session exists exactly
+ * when the inviter clicked their confirmation link (email_proved). No invite
+ * OTP is ever sent before this returns true — an invite sent from an
+ * unverified account would attach the invitee to a dev-user-id placeholder.
+ *
+ * Dev-bypass: the admin proxy has no real email to confirm; the mock client's
+ * OTP is a no-op, so treat it as verified to keep admin testing unblocked.
+ */
+export async function isInviterVerified(): Promise<boolean> {
+  if (isDevBypassMode()) return true;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    const user = data?.user;
+    if (error || !user) return false;
+    if (user.id === "dev-user-id") return false;
+    return Boolean(user.email_confirmed_at);
+  } catch {
+    return false;
+  }
+}
+
+const DEFERRED_BL_INVITES_KEY = "fb_deferred_bl_invites";
+
+interface DeferredBrainLoverInvite {
+  email: string;
+  context: InviteContext;
+  opts?: InviteSendOptions;
+}
+
+/**
+ * Park a BrainLover invite that must NOT be emailed yet (inviter unverified).
+ * The queue is flushed by flushDeferredBrainLoverInvites (called from
+ * handleCompleteBrainLover once the inviter has a real, confirmed session).
+ */
+export function queueDeferredBrainLoverInvite(
+  email: string,
+  context: InviteContext,
+  opts?: InviteSendOptions
+): void {
+  try {
+    const raw = localStorage.getItem(DEFERRED_BL_INVITES_KEY);
+    const list: DeferredBrainLoverInvite[] = raw ? JSON.parse(raw) : [];
+    if (!list.some((i) => i.email === email)) {
+      list.push({ email, context, opts });
+      localStorage.setItem(DEFERRED_BL_INVITES_KEY, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.warn("[FB-DEBUG] queueDeferredBrainLoverInvite error (non-fatal):", e);
+  }
+}
+
+/**
+ * Send every deferred BrainLover invite now that the inviter is verified.
+ *
+ * @param overrides — apply the REAL caregiver/patient ids that only exist after
+ *                    auth & sub-account re-creation (see handleCompleteBrainLover).
+ *                    patientId may be null only when there is no real patient yet.
+ */
+export async function flushDeferredBrainLoverInvites(overrides?: {
+  caregiverId?: string;
+  patientId?: string | null;
+}): Promise<void> {
+  let list: DeferredBrainLoverInvite[] = [];
+  try {
+    const raw = localStorage.getItem(DEFERRED_BL_INVITES_KEY);
+    if (!raw) return;
+    list = JSON.parse(raw);
+    localStorage.removeItem(DEFERRED_BL_INVITES_KEY);
+  } catch (e) {
+    console.warn("[FB-DEBUG] flushDeferredBrainLoverInvites: could not read queue:", e);
+    return;
+  }
+  for (const item of list) {
+    const context = { ...item.context };
+    if (overrides?.caregiverId) context.caregiverId = overrides.caregiverId;
+    if (overrides && "patientId" in overrides) context.patientId = overrides.patientId;
+    try {
+      await sendBrainLoverInvite(item.email, context, item.opts);
+    } catch (e) {
+      console.warn("[FB-DEBUG] Deferred invite send failed (non-fatal):", e);
+    }
+  }
+}
+
+/**
+ * Make sure an invited BrainLover has a caregiver_links row for the patient
+ * they were invited to support.
+ *
+ * Background: invites sent while the inviter was NOT yet verified (pre-gating
+ * era) carried dev-patient ids, so the invitee's onboarding could not resolve
+ * a real patient and silently SKIPPED the caregiver_links insert (see
+ * handleCompleteBrainLover). That left the invitee on a dashboard with no
+ * link, and every proxy check-in was then rejected by the daily_checkins RLS
+ * (`new row violates row-level security policy`) or the validate trigger
+ * (`user_id <uuid> does not exist in auth.users, managed_freebrainers, or
+ * profiles`). brainlover_invites is the single source of truth for "which
+ * patient was I invited to support", so we recreate the missing link from it.
+ * Idempotent — UNIQUE(caregiver_id, patient_id) makes re-creation safe.
+ *
+ * @returns the resolved patient (live uuid + invite display data), or null
+ *          when there is no resolvable invite (healthy users / dev-bypass).
+ */
+export async function ensureInvitedCaregiverLink(blUserId: string): Promise<{
+  patientId: string;
+  patientName: string | null;
+  patientAvatar: string | null;
+} | null> {
+  if (isDevBypassMode()) return null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    const email = data?.user?.email;
+    if (!email) return null;
+    const ctx = await fetchInviteContextByEmail(email);
+    const patientId = ctx?.patientId;
+    if (!patientId || patientId.startsWith("dev-patient-")) return null;
+    const { data: existing } = await (supabase.from("caregiver_links") as any)
+      .select("id")
+      .eq("caregiver_id", blUserId)
+      .eq("patient_id", patientId)
+      .maybeSingle();
+    if (existing) {
+      return { patientId, patientName: ctx!.patientName, patientAvatar: ctx!.patientAvatar };
+    }
+    const { error } = await (supabase.from("caregiver_links") as any)
+      .insert({ caregiver_id: blUserId, patient_id: patientId, status: "active" });
+    if (error) {
+      console.warn("[FB-DEBUG] ensureInvitedCaregiverLink insert failed:", error.message);
+      return null;
+    }
+    console.warn("[FB-DEBUG] ensureInvitedCaregiverLink created caregiver link:", { blUserId, patientId });
+    return { patientId, patientName: ctx!.patientName, patientAvatar: ctx!.patientAvatar };
+  } catch (e) {
+    console.warn("[FB-DEBUG] ensureInvitedCaregiverLink error (non-fatal):", e);
+    return null;
+  }
+}
+
 export async function sendBrainLoverInvite(
   email: string,
   context: InviteContext,
@@ -106,6 +254,23 @@ export async function sendBrainLoverInvite(
     // enter the "invited BrainLover" flow instead of the primary flow.
   } catch (e) {
     /* ignore storage errors */
+  }
+
+  // 1b. NEVER email an invite from an unconfirmed/verified account.
+  // During onboarding the inviter has no real session yet (id = "dev-user-id"),
+  // so emailing here would attach the invitee to a placeholder account. The
+  // invite is parked in the deferred queue and flushed from
+  // handleCompleteBrainLover after the inviter verifies with the real ids.
+  // Deliberately skips patient-list tracking + Supabase upsert when deferred so
+  // the post-verification flush is the ONE sender (no double emails).
+  if (!(await isInviterVerified())) {
+    queueDeferredBrainLoverInvite(cleanEmail, context, opts);
+    console.warn("[FB-DEBUG] sendBrainLoverInvite deferred (inviter not verified):", {
+      email: cleanEmail,
+      caregiverId: context.caregiverId,
+      patientId: context.patientId,
+    });
+    return { success: true, deferred: true };
   }
 
   // 2. Track in the patient's invite list (for "Reinvite" CTA)

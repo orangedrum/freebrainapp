@@ -614,7 +614,11 @@ export function useOnboardingSubmit({
         }
 
         // ── FreeBrainer invite email ──
-        if (s.patientEmail && s.patientEmail.includes("@") && s.connectionMethod === "invite") {
+        // BLStepConnectFreeBrainer deliberately does NOT email the FreeBrainer
+        // pre-verification. This is the single send point, reached only once
+        // the BrainLover has a real, confirmed session (caregiver_id is real).
+        // patientEmail is only ever set from the invite-by-email tab.
+        if (s.patientEmail && s.patientEmail.includes("@")) {
           try {
             const { error: inviteError } = await supabase.auth.signInWithOtp({
               email: s.patientEmail.trim(),
@@ -673,6 +677,22 @@ export function useOnboardingSubmit({
           }
         }
 
+        // ── Flush BrainLover invites deferred while the inviter was unverified ──
+        // sendBrainLoverInvite parks invites in fb_deferred_bl_invites when the
+        // inviter has no confirmed session yet (normal onboarding). Now that we
+        // have the real caregiver id (+ resolved patient id), email them for real.
+        // The deferred path intentionally skipped the patient invite list, so
+        // this cannot double-send with the re-send block above.
+        try {
+          const { flushDeferredBrainLoverInvites } = await import("@/lib/brainloverInvites");
+          await flushDeferredBrainLoverInvites({
+            caregiverId: session.user.id,
+            patientId: targetPatientId && !isDevPatientId ? targetPatientId : null,
+          });
+        } catch (e) {
+          console.warn("[FB-DEBUG] Flush deferred BrainLover invites error (non-fatal):", e);
+        }
+
         // ── Flip onboarding_completed to TRUE now that everything succeeded ──
         // This must happen AFTER all sub-account creation, caregiver links, and
         // team sync. If any of those threw, we never reach this line, so the
@@ -696,10 +716,7 @@ export function useOnboardingSubmit({
         // back to onboarding.
         toast({
           title: t("onboarding.welcomeToastTitle"),
-          description:
-            s.patientEmail && s.connectionMethod === "invite"
-              ? t("onboarding.blWelcomeInviteDesc")
-              : t("onboarding.blWelcomeReadyDesc"),
+          description: s.patientEmail ? t("onboarding.blWelcomeInviteDesc") : t("onboarding.blWelcomeReadyDesc"),
         });
         await refreshRole();
         window.location.href = s.caregiverType === "professional" ? "/pro" : "/caregiver";
