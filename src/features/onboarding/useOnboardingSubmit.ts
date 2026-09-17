@@ -47,6 +47,8 @@ export interface OnboardingState {
   subAccountPatientId: string | null;
   // Found via the "Find your FreeBrainer" directory search (independent mode).
   foundPatientId: string | null;
+  // ── Current onboarding step (for Screen Time session persistence) ──
+  currentStep?: number;
   // ── Sub-account form data (for re-creating in Supabase after auth) ──
   subAccountName?: string | null;
   subAccountConditions?: string | null;
@@ -92,7 +94,7 @@ export function useOnboardingSubmit({
         if (!session?.user || (session.user.id === "dev-user-id" && !overrideData)) {
           localStorage.setItem(
             "pendingOnboarding",
-            JSON.stringify({ flowType: "freebrainer", ...s, inviteCaregiverId: state.inviteCaregiverId })
+            JSON.stringify({ flowType: "freebrainer", ...s, inviteCaregiverId: state.inviteCaregiverId, currentStep: state.currentStep ?? 1 })
           );
           return false;
         }
@@ -370,12 +372,13 @@ export function useOnboardingSubmit({
               subAccountName: s.subAccountName || null,
               subAccountConditions: s.subAccountConditions || null,
               subAccountLocation: s.subAccountLocation || null,
-              subAccountDiagnosisStory: s.subAccountDiagnosisStory || null,
-              subAccountPhoto: s.subAccountPhoto || null,
-              displayName: s.displayName || null,
-              photo: s.photo || null,
-              location: s.location || null,
-            })
+               subAccountDiagnosisStory: s.subAccountDiagnosisStory || null,
+               subAccountPhoto: s.subAccountPhoto || null,
+               displayName: s.displayName || null,
+               photo: s.photo || null,
+               location: s.location || null,
+               currentStep: s.currentStep ?? 1,
+             })
           );
           return true; // saved successfully, will resume after auth
         }

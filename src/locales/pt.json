@@ -188,7 +188,15 @@
     "favoriteMovementsDesc": "Adicione movimentos que você gosta — vamos priorizá-los em seus vídeos de check-in.",
     "deselectWarningTitle": "Parar de rastrear este parâmetro?",
     "deselectWarningDesc": "Dados anteriormente registrados para \"{{param}}\" permanecerão no seu dispositivo mas não serão mais rastreados ativamente.",
-    "confirmDeselect": "Sim, parar de rastrear"
+    "confirmDeselect": "Sim, parar de rastrear",
+    "pinLockTitle": "Parent PIN Lock",
+    "pinLockDesc": "Protect parent settings with a PIN when the app returns from background",
+    "verifyPin": "Verify PIN to access settings",
+    "setPin": "Set PIN",
+    "pinEnterDesc": "Enter your PIN to access parent settings",
+    "pinSetSuccess": "PIN set successfully",
+    "pinTooShort": "PIN must be at least 4 digits",
+    "pinIncorrect": "Incorrect PIN. Try again."
   },
   "network": {
     "title": "Minha Rede",
@@ -1504,5 +1512,34 @@
     "supportConnectedDesc": "{{name}} agora pode ajudar a apoiar {{patient}}.",
     "noPatient": "Nenhum FreeBrainer selecionado para compartilhar.",
     "error": "Falha ao enviar"
+  },
+  "ageGate": {
+    "title": "Quantos anos você tem?",
+    "subtitle": "Isso nos ajuda a garantir que o FreeBrain é ideal para você.",
+    "birthdayLabel": "Data de Nascimento",
+    "continue": "Continuar",
+    "parentTitle": "Pai ou responsável necessário",
+    "parentSubtitle": "Se você tem menos de 18 anos, um pai ou responsável precisa concluir a configuração primeiro.",
+    "parentEmailLabel": "E-mail do pai/responsável",
+    "parentSend": "Enviar link de verificação",
+    "parentSent": "Verifique seu e-mail!",
+    "parentNudge": "Peça a um pai para verificar para continuar.",
+    "parentVerified": "Pai verificado! Agora você pode continuar.",
+    "under18": "Você deve ter pelo menos 18 anos para criar uma conta sozinho. Um pai ou responsável pode ajudar.",
+    "step1": {
+      "title": "Quantos anos você tem?",
+      "continue": "Continuar"
+    },
+    "step2": {
+      "title": "Pai ou responsável necessário",
+      "subtitle": "Se você tem menos de 18 anos, precisamos que um pai ou responsável verifique.",
+      "emailLabel": "E-mail do pai/responsável",
+      "sendButton": "Enviar link de verificação",
+      "sentDesc": "Verifique {{email}} para o link de verificação.",
+      "back": "Voltar"
+    },
+    "parentConsent": "Sou pai ou responsável e consinto em configurar esta conta.",
+    "parentConsentLabel": "Consentimento de pai/responsável",
+    "parentConsentDesc": "Por favor, confirme que você é o pai ou responsável da pessoa que está configurando esta conta."
   }
 }

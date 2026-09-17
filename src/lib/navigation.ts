@@ -3,7 +3,7 @@ export const scrollToSection = (sectionId: string): void => {
   document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
 };
 
-/** Opens a URL in a new tab with security best practices. */
+/** Opens a URL in the current tab (preserves PWA session under Screen Time). */
 export const openExternalLink = (url: string): void => {
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.location.href = url;
 };

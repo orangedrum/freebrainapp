@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
+import { StepAgeGate } from "@/components/onboarding/StepAgeGate";
 import { StepCondition } from "@/components/onboarding/StepCondition";
 import { StepMobility } from "@/components/onboarding/StepMobility";
 import { StepSymptoms } from "@/components/onboarding/StepSymptoms";
@@ -176,6 +177,10 @@ export default function Onboarding() {
     }
   }, [patientId, flowType, urlFlow, pinnedToExistingFb, step]);
 
+  // ── Age gate state ──
+  // Users under 18 must have a parent/guardian verify before proceeding.
+  const [ageVerified, setAgeVerified] = useState(false);
+
   // ── FreeBrainer state ──
   const [conditions, setConditions] = useState<string[]>([]);
   const [conditionSearch, setConditionSearch] = useState("");
@@ -262,6 +267,7 @@ export default function Onboarding() {
     selectedTeam, teamCode, inviteCaregiverId,
     caregiverType, facility, patientEmail, connectionMethod, patientId,
     managementMode, subAccountPatientId, foundPatientId,
+    currentStep: step,
     // ── Sub-account form data (for re-creating in Supabase after auth) ──
     subAccountName: subAccountName || null,
     subAccountConditions: subAccountFormData.conditions || null,
@@ -360,93 +366,107 @@ const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 :
           )}
         </div>
 
-        {/* Progress bar */}
-        <div className="mb-8 flex gap-1">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div key={i} className={`h-2 flex-1 rounded-full transition-colors ${step > i ? "bg-primary" : "bg-muted"}`} />
-          ))}
-        </div>
+        {/* Age Gate — before any onboarding steps */}
+        {!ageVerified ? (
+          <Card className="border-2 shadow-xl">
+            <CardContent className="p-4 md:p-10">
+              <StepAgeGate
+                onComplete={() => setAgeVerified(true)}
+                onBack={step > 1 ? () => setStep((s) => s - 1) : undefined}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Progress bar */}
+            <div className="mb-8 flex gap-1">
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <div key={i} className={`h-2 flex-1 rounded-full transition-colors ${step > i ? "bg-primary" : "bg-muted"}`} />
+              ))}
+            </div>
 
-        <Card className="border-2 shadow-xl">
-          <CardContent className="p-4 md:p-10">
-            {/* Step 1: Role selection */}
-            {step === 1 && <StepRoleSelectionInline t={t} setFlowType={setFlowType} setCaregiverType={setCaregiverType} setStep={setStep} />}
+            <Card className="border-2 shadow-xl">
+              <CardContent className="p-4 md:p-10">
+                {/* Step 1: Role selection */}
+                {step === 1 && <StepRoleSelectionInline t={t} setFlowType={setFlowType} setCaregiverType={setCaregiverType} setStep={setStep} />}
 
-            {/* FREEBRAINER FLOW */}
-            {flowType === "freebrainer" && step === 2 && (
-              <StepCondition conditions={conditions} setConditions={setConditions} conditionSearch={conditionSearch} setConditionSearch={setConditionSearch} onNext={() => setStep(3)} onBack={() => setStep(1)} speak={speak} />
-            )}
-            {flowType === "freebrainer" && step === 3 && (
-              <StepMobility mobility={mobility} setMobility={setMobility} onNext={() => setStep(4)} onBack={() => setStep(2)} speak={speak} />
-            )}
-            {flowType === "freebrainer" && step === 4 && (
-              <StepSymptoms symptomText={symptomText} setSymptomText={setSymptomText} onContinue={handleWellnessContinue} onBack={() => setStep(3)} speak={speak} />
-            )}
-            {flowType === "freebrainer" && step >= 6 && step <= 11 && (
-              <FreeBrainerSteps
-                step={step} setStep={setStep} photo={photo} fileInputRef={fileInputRef}
-                handlePhotoUpload={onPhotoUpload} displayName={displayName} setDisplayName={setDisplayName}
-                location={location} searchLocation={searchLocation} isSearchingLocation={isSearchingLocation}
-                locationResults={locationResults} setLocation={setLocation} setLocationResults={setLocationResults}
-                brainLoverEmail={brainLoverEmail} setBrainLoverEmail={setBrainLoverEmail}
-                movementDays={movementDays} setMovementDays={setMovementDays}
-                teamCode={teamCode} setTeamCode={setTeamCode} teamSearchQuery={teamSearchQuery}
-                setTeamSearchQuery={setTeamSearchQuery} selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam}
-                isIOS={isIOS} shareConsent={shareConsent} setShareConsent={setShareConsent}
-                diagnosisStory={diagnosisStory} setDiagnosisStory={setDiagnosisStory} speak={speak} toast={toast}
-              />
-            )}
-            {flowType === "freebrainer" && step === 12 && <StepVideoIntro onNext={() => setStep(13)} speak={speak} />}
-            {flowType === "freebrainer" && step === 13 && (
-              <StepConfirmation step={step} onNext={() => setStep(14)} onComplete={() => setStep(14)} isProcessing={isProcessing} speak={speak} />
-            )}
-            {flowType === "freebrainer" && step === 14 && (
-              <StepMagicLinkAuth
-                onComplete={async () => {
-                  const success = await handleComplete();
-                  if (success) setStep(15);
-                }}
-                isProcessing={isProcessing || photoProcessing}
-                speak={speak}
-              />
-            )}
-            {flowType === "freebrainer" && step === 15 && (
-              <StepInstallApp
-                userEmail={session?.user?.email || ""}
-                onContinue={() => {
-                  const installParam = new URLSearchParams(window.location.search).get("install") === "1" ? "?install=1" : "";
-                  window.location.href = `/overview${installParam}`;
-                }}
-                speak={speak}
-              />
-            )}
+                {/* FREEBRAINER FLOW */}
+                {flowType === "freebrainer" && step === 2 && (
+                  <StepCondition conditions={conditions} setConditions={setConditions} conditionSearch={conditionSearch} setConditionSearch={setConditionSearch} onNext={() => setStep(3)} onBack={() => setStep(1)} speak={speak} />
+                )}
+                {flowType === "freebrainer" && step === 3 && (
+                  <StepMobility mobility={mobility} setMobility={setMobility} onNext={() => setStep(4)} onBack={() => setStep(2)} speak={speak} />
+                )}
+                {flowType === "freebrainer" && step === 4 && (
+                  <StepSymptoms symptomText={symptomText} setSymptomText={setSymptomText} onContinue={handleWellnessContinue} onBack={() => setStep(3)} speak={speak} />
+                )}
+                {flowType === "freebrainer" && step >= 6 && step <= 11 && (
+                  <FreeBrainerSteps
+                    step={step} setStep={setStep} photo={photo} fileInputRef={fileInputRef}
+                    handlePhotoUpload={onPhotoUpload} displayName={displayName} setDisplayName={setDisplayName}
+                    location={location} searchLocation={searchLocation} isSearchingLocation={isSearchingLocation}
+                    locationResults={locationResults} setLocation={setLocation} setLocationResults={setLocationResults}
+                    brainLoverEmail={brainLoverEmail} setBrainLoverEmail={setBrainLoverEmail}
+                    movementDays={movementDays} setMovementDays={setMovementDays}
+                    teamCode={teamCode} setTeamCode={setTeamCode} teamSearchQuery={teamSearchQuery} setTeamSearchQuery={setTeamSearchQuery}
+                    selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam}
+                    isIOS={isIOS} shareConsent={shareConsent} setShareConsent={setShareConsent}
+                    diagnosisStory={diagnosisStory} setDiagnosisStory={setDiagnosisStory} speak={speak} toast={toast}
+                  />
+                )}
+                {flowType === "freebrainer" && step === 12 && <StepVideoIntro onNext={() => setStep(13)} speak={speak} />}
+                {flowType === "freebrainer" && step === 13 && (
+                  <StepConfirmation step={step} onNext={() => setStep(14)} onComplete={() => setStep(14)} isProcessing={isProcessing} speak={speak} />
+                )}
+                {flowType === "freebrainer" && step === 14 && (
+                  <StepMagicLinkAuth
+                    onComplete={async () => {
+                      const success = await handleComplete();
+                      if (success) setStep(15);
+                    }}
+                    isProcessing={isProcessing || photoProcessing}
+                    speak={speak}
+                  />
+                )}
+                {flowType === "freebrainer" && step === 15 && (
+                  <StepInstallApp
+                    userEmail={session?.user?.email || ""}
+                    onContinue={() => {
+                      const installParam = new URLSearchParams(window.location.search).get("install") === "1" ? "?install=1" : "";
+                      window.location.href = `/overview${installParam}`;
+                    }}
+                    speak={speak}
+                  />
+                )}
 
-            {/* BRAINLOVER FLOW (step ≥ 2 only — step 1 is role selection) */}
-            {flowType === "brainlover" && step >= 2 && (
-              <StepBrainLoverFlow
-                step={step} setStep={setStep}
-                displayName={displayName} setDisplayName={setDisplayName}
-                photo={photo} fileInputRef={fileInputRef} onPhotoUpload={onPhotoUpload}
-                location={location} setLocation={setLocation}
-                searchLocation={searchLocation}
-                locationResults={locationResults} onSelectLocation={(loc) => { setLocation(loc); setLocationResults([]); }}
-                managementMode={managementMode} setManagementMode={setManagementMode}
-                caregiverId={session?.user?.id || "dev-user-id"}
-                patientEmail={patientEmail} setPatientEmail={setPatientEmail}
-                onFoundFreeBrainer={setFoundPatientId}
-                foundPatientId={foundPatientId}
-                onSubAccountCreated={(pid, name, formData) => { setSubAccountPatientId(pid); setSubAccountName(name); if (formData) setSubAccountFormData(formData); }}
-                freeBrainerName={subAccountName || patientInfo?.name || fbNameParam || ""}
-                freeBrainerAvatar={patientInfo?.avatar || fbAvatarParam || null}
-                handleCompleteBrainLover={handleCompleteBrainLover}
-                isProcessing={isProcessing} speak={speak}
-                isInvited={!!patientId}
-                inviterName={inviterNameParam || null}
-                subAccountPatientId={subAccountPatientId}
-              />
-            )}
-          </CardContent>
-        </Card>
+                {/* BRAINLOVER FLOW (step ≥ 2 only — step 1 is role selection) */}
+                {flowType === "brainlover" && step >= 2 && (
+                  <StepBrainLoverFlow
+                    step={step} setStep={setStep}
+                    displayName={displayName} setDisplayName={setDisplayName}
+                    photo={photo} fileInputRef={fileInputRef} onPhotoUpload={onPhotoUpload}
+                    location={location} setLocation={setLocation}
+                    searchLocation={searchLocation}
+                    locationResults={locationResults} onSelectLocation={(loc) => { setLocation(loc); setLocationResults([]); }}
+                    managementMode={managementMode} setManagementMode={setManagementMode}
+                    caregiverId={session?.user?.id || "dev-user-id"}
+                    patientEmail={patientEmail} setPatientEmail={setPatientEmail}
+                    onFoundFreeBrainer={setFoundPatientId}
+                    foundPatientId={foundPatientId}
+                    onSubAccountCreated={(pid, name, formData) => { setSubAccountPatientId(pid); setSubAccountName(name); if (formData) setSubAccountFormData(formData); }}
+                    freeBrainerName={subAccountName || patientInfo?.name || fbNameParam || ""}
+                    freeBrainerAvatar={patientInfo?.avatar || fbAvatarParam || null}
+                    handleCompleteBrainLover={handleCompleteBrainLover}
+                    isProcessing={isProcessing} speak={speak}
+                    isInvited={!!patientId}
+                    inviterName={inviterNameParam || null}
+                    subAccountPatientId={subAccountPatientId}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );

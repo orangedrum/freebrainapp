@@ -178,7 +178,15 @@
     "favoriteMovementsDesc": "Add movements you enjoy — we'll prioritize them in your check-in videos.",
     "deselectWarningTitle": "Stop tracking this parameter?",
     "deselectWarningDesc": "Previously recorded data for \"{{param}}\" will remain on your device but won't be actively tracked going forward.",
-    "confirmDeselect": "Yes, stop tracking"
+    "confirmDeselect": "Yes, stop tracking",
+    "pinLockTitle": "Parent PIN Lock",
+    "pinLockDesc": "Protect parent settings with a PIN when the app returns from background",
+    "verifyPin": "Verify PIN to access settings",
+    "setPin": "Set PIN",
+    "pinEnterDesc": "Enter your PIN to access parent settings",
+    "pinSetSuccess": "PIN set successfully",
+    "pinTooShort": "PIN must be at least 4 digits",
+    "pinIncorrect": "Incorrect PIN. Try again."
   },
   "network": {
     "title": "My Network",
@@ -1502,5 +1510,34 @@
     "supportConnectedDesc": "{{name}} can now help support {{patient}}.",
     "noPatient": "No FreeBrainer selected to share with.",
     "error": "Failed to send"
+  },
+  "ageGate": {
+    "title": "How old are you?",
+    "subtitle": "This helps us make sure FreeBrain is right for you.",
+    "birthdayLabel": "Date of Birth",
+    "continue": "Continue",
+    "parentTitle": "Parent or Guardian Required",
+    "parentSubtitle": "Since you are under 18, a parent or guardian needs to complete the setup first.",
+    "parentEmailLabel": "Parent or Guardian Email",
+    "parentSend": "Send Verification Link",
+    "parentSent": "Check your email!",
+    "parentNudge": "Have a parent verify to continue.",
+    "parentVerified": "Parent verified! You can now proceed.",
+    "under18": "You must be at least 18 to set up an account on your own. A parent or guardian can help.",
+    "step1": {
+      "title": "How old are you?",
+      "continue": "Continue"
+    },
+    "step2": {
+      "title": "Parent or Guardian Needed",
+      "subtitle": "Since you are under 18, we need a parent or guardian to verify.",
+      "emailLabel": "Parent or Guardian Email",
+      "sendButton": "Send Verification Link",
+      "sentDesc": "Check {{email}} for a verification link.",
+      "back": "Back"
+    },
+    "parentConsent": "I am a parent or guardian and I consent to set up this account.",
+    "parentConsentLabel": "Parent/Guardian Consent",
+    "parentConsentDesc": "Please confirm you are the parent or guardian of the person setting up this account."
   }
 }

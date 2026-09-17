@@ -188,7 +188,15 @@
     "favoriteMovementsDesc": "Fügen Sie Bewegungen hinzu, die Sie mögen — wir priorisieren sie in Ihren Check-in-Videos.",
     "deselectWarningTitle": "Diesen Parameter nicht mehr verfolgen?",
     "deselectWarningDesc": "Zuvor erfasste Daten für \"{{param}}\" bleiben auf Ihrem Gerät, werden aber nicht mehr aktiv verfolgt.",
-    "confirmDeselect": "Ja, Verfolgung stoppen"
+    "confirmDeselect": "Ja, Verfolgung stoppen",
+    "pinLockTitle": "Parent PIN Lock",
+    "pinLockDesc": "Protect parent settings with a PIN when the app returns from background",
+    "verifyPin": "Verify PIN to access settings",
+    "setPin": "Set PIN",
+    "pinEnterDesc": "Enter your PIN to access parent settings",
+    "pinSetSuccess": "PIN set successfully",
+    "pinTooShort": "PIN must be at least 4 digits",
+    "pinIncorrect": "Incorrect PIN. Try again."
   },
   "network": {
     "title": "Mein Netzwerk",
@@ -1504,5 +1512,34 @@
     "supportConnectedDesc": "{{name}} kann jetzt bei der Unterstützung von {{patient}} helfen.",
     "noPatient": "Kein FreeBrainer zum Teilen ausgewählt.",
     "error": "Senden fehlgeschlagen"
+  },
+  "ageGate": {
+    "title": "Wie alt bist du?",
+    "subtitle": "Das hilft uns sicherzustellen, dass FreeBrain das Richtige für dich ist.",
+    "birthdayLabel": "Geburtsdatum",
+    "continue": "Weiter",
+    "parentTitle": "Eltern oder Erziehungsberechtigter erforderlich",
+    "parentSubtitle": "Da du unter 18 bist, muss ein Elternteil oder Erziehungsberechtigter die Einrichtung abgeschlossen haben.",
+    "parentEmailLabel": "E-Mail des Elternteils/Erziehungsberechtigten",
+    "parentSend": "Verifizierungslink senden",
+    "parentSent": "Überprüfe deine E-Mail!",
+    "parentNudge": "Lass einen Elternteil verifizieren, um weiterzumachen.",
+    "parentVerified": "Elternteil verifiziert! Du kannst jetzt weitermachen.",
+    "under18": "Du musst mindestens 18 Jahre alt sein, um allein ein Konto zu erstellen. Ein Elternteil oder Erziehungsberechtigter kann helfen.",
+    "step1": {
+      "title": "Wie alt bist du?",
+      "continue": "Weiter"
+    },
+    "step2": {
+      "title": "Elternteil oder Erziehungsberechtigter nötig",
+      "subtitle": "Da du unter 18 bist, muss ein Elternteil oder Erziehungsberechtigter die Verifizierung durchführen.",
+      "emailLabel": "E-Mail des Elternteils/Erziehungsberechtigten",
+      "sendButton": "Verifizierungslink senden",
+      "sentDesc": "Prüfe {{email}} auf einen Verifizierungslink.",
+      "back": "Zurück"
+    },
+    "parentConsent": "Ich bin ein Elternteil oder Erziehungsberechtigter und stimme zu, dieses Konto einzurichten.",
+    "parentConsentLabel": "Elternteil/Erziehungsberechtigter Zustimmung",
+    "parentConsentDesc": "Bitte bestätige, dass du der Elternteil oder Erziehungsberechtigte der Person bist, die dieses Konto einrichtet."
   }
 }

@@ -178,7 +178,15 @@
     "favoriteMovementsDesc": "Añade movimientos que disfrutes — los priorizaremos en tus vídeos de check-in.",
     "deselectWarningTitle": "¿Dejar de rastrear este parámetro?",
     "deselectWarningDesc": "Los datos previamente registrados de \"{{param}}\" permanecerán en tu dispositivo pero ya no se rastrearán activamente.",
-    "confirmDeselect": "Sí, dejar de rastrear"
+    "confirmDeselect": "Sí, dejar de rastrear",
+    "pinLockTitle": "Parent PIN Lock",
+    "pinLockDesc": "Protect parent settings with a PIN when the app returns from background",
+    "verifyPin": "Verify PIN to access settings",
+    "setPin": "Set PIN",
+    "pinEnterDesc": "Enter your PIN to access parent settings",
+    "pinSetSuccess": "PIN set successfully",
+    "pinTooShort": "PIN must be at least 4 digits",
+    "pinIncorrect": "Incorrect PIN. Try again."
   },
   "network": {
     "title": "Mi Red",
@@ -1533,5 +1541,34 @@
     "supportConnectedDesc": "{{name}} ahora puede ayudar a apoyar a {{patient}}.",
     "noPatient": "No hay ningún FreeBrainer seleccionado para compartir.",
     "error": "Error al enviar"
+  },
+  "ageGate": {
+    "title": "¿Cuántos años tienes?",
+    "subtitle": "Esto nos ayuda a asegurar que FreeBrain sea adecuado para ti.",
+    "birthdayLabel": "Fecha de Nacimiento",
+    "continue": "Continuar",
+    "parentTitle": "Se requiere padre o tutor",
+    "parentSubtitle": "Si tienes menos de 18 años, un padre o tutor debe completar la configuración primero.",
+    "parentEmailLabel": "Correo del padre o tutor",
+    "parentSend": "Enlace de verificación",
+    "parentSent": "¡Revisa tu correo!",
+    "parentNudge": "Que un padre verifique para continuar.",
+    "parentVerified": "¡Padre verificado! Puedes continuar ahora.",
+    "under18": "Debes tener al menos 18 años para crear una cuenta por tu cuenta. Un padre o tutor puede ayudar.",
+    "step1": {
+      "title": "¿Cuántos años tienes?",
+      "continue": "Continuar"
+    },
+    "step2": {
+      "title": "Padre o tutor necesario",
+      "subtitle": "Si tienes menos de 18 años, necesitamos que un padre o tutor verifique.",
+      "emailLabel": "Correo del padre o tutor",
+      "sendButton": "Enviar enlace de verificación",
+      "sentDesc": "Revisa {{email}} para el enlace de verificación.",
+      "back": "Volver"
+    },
+    "parentConsent": "Soy padre o tutor y consiento configurar esta cuenta.",
+    "parentConsentLabel": "Consentimiento de padre/tutor",
+    "parentConsentDesc": "Por favor confirma que eres el padre o tutor de la persona que configura esta cuenta."
   }
 }

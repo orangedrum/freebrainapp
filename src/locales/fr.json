@@ -188,7 +188,15 @@
     "favoriteMovementsDesc": "Ajoutez des mouvements que vous aimez — nous les prioriserons dans vos vidéos de check-in.",
     "deselectWarningTitle": "Arrêter de suivre ce paramètre ?",
     "deselectWarningDesc": "Les données précédemment enregistrées pour \"{{param}}\" resteront sur votre appareil mais ne seront plus suivies activement.",
-    "confirmDeselect": "Oui, arrêter le suivi"
+    "confirmDeselect": "Oui, arrêter le suivi",
+    "pinLockTitle": "Parent PIN Lock",
+    "pinLockDesc": "Protect parent settings with a PIN when the app returns from background",
+    "verifyPin": "Verify PIN to access settings",
+    "setPin": "Set PIN",
+    "pinEnterDesc": "Enter your PIN to access parent settings",
+    "pinSetSuccess": "PIN set successfully",
+    "pinTooShort": "PIN must be at least 4 digits",
+    "pinIncorrect": "Incorrect PIN. Try again."
   },
   "network": {
     "title": "Mon Réseau",
@@ -1504,5 +1512,34 @@
     "supportConnectedDesc": "{{name}} peut désormais aider à soutenir {{patient}}.",
     "noPatient": "Aucun FreeBrainer sélectionné pour partager.",
     "error": "Échec de l'envoi"
+  },
+  "ageGate": {
+    "title": "Quel âge avez-vous?",
+    "subtitle": "Cela nous aide à nous assurer que FreeBrain est fait pour vous.",
+    "birthdayLabel": "Date de naissance",
+    "continue": "Continuer",
+    "parentTitle": "Parent ou tuteur requis",
+    "parentSubtitle": "Si vous avez moins de 18 ans, un parent ou tuteur doit compléter la configuration en premier.",
+    "parentEmailLabel": "E-mail du parent/tuteur",
+    "parentSend": "Lien de vérification",
+    "parentSent": "Vérifiez votre e-mail!",
+    "parentNudge": "Demandez à un parent de vérifier pour continuer.",
+    "parentVerified": "Parent vérifié! Vous pouvez maintenant continuer.",
+    "under18": "Vous devez avoir au moins 18 ans pour créer un compte vous-même. Un parent ou tuteur peut aider.",
+    "step1": {
+      "title": "Quel âge avez-vous?",
+      "continue": "Continuer"
+    },
+    "step2": {
+      "title": "Parent ou tuteur requis",
+      "subtitle": "Si vous avez moins de 18 ans, nous avons besoin qu'un parent ou tuteur vérifie.",
+      "emailLabel": "E-mail du parent/tuteur",
+      "sendButton": "Envoyer le lien de vérification",
+      "sentDesc": "Vérifiez {{email}} pour le lien de vérification.",
+      "back": "Retour"
+    },
+    "parentConsent": "Je suis un parent ou tuteur et je consens à configurer ce compte.",
+    "parentConsentLabel": "Consentement du parent/tuteur",
+    "parentConsentDesc": "Veuillez confirmer que vous êtes le parent ou tuteur de la personne qui configure ce compte."
   }
 }
