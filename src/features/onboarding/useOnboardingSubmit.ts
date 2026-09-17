@@ -120,7 +120,10 @@ export function useOnboardingSubmit({
         } else {
           const { error: roleError3 } = await (supabase.from("user_roles") as any)
             .insert({ user_id: session.user.id, role: "freebrainer" });
-          if (roleError3) errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          if (roleError3) {
+            console.warn("[FB-DEBUG] user_roles insert still failing after RLS fix:", roleError3.message);
+            errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          }
         }
 
         // ── Profile upsert ──
@@ -406,7 +409,10 @@ export function useOnboardingSubmit({
         } else {
           const { error: roleError3 } = await (supabase.from("user_roles") as any)
             .insert({ user_id: session.user.id, role: assignedRole });
-          if (roleError3) errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          if (roleError3) {
+            console.warn("[FB-DEBUG] user_roles insert still failing after RLS fix:", roleError3.message);
+            errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          }
         }
 
         // ── Profile upsert (now includes displayName, photo, location from step 2) ──

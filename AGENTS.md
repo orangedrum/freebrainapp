@@ -256,3 +256,4 @@ The check-in is a multi-step modal:
 - ❌ Break existing functionality during refactoring
 - ❌ Define React components inside other component functions
 - ❌ Import a component file that doesn't exist yet
+- ❌ Run git commands (checkout, commit, pull, push, reset) — user handles all git commands themselves
