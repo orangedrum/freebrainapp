@@ -77,3 +77,13 @@
   the full-ordered DO-block script (public tables first, `auth.users` last;
   `spared` array for keeper aliases). See `docs/test-accounts.md` for the
   alias conventions.
+
+## Preview deployments (Vercel)
+
+- Vercel **Deployment Protection (SSO wall)** on preview URLs breaks PWA
+  verification AND real-user testing: manifest fetches 302 to `/login`
+  ("No manifest detected"), and anyone without a Vercel login (i.e. every
+  tester, every magic-link clicker) hits the wall instead of the app.
+  Keep protection OFF on the branch under test, or test install/push on
+  the production domain. Decided 2026-09-21 after a full false-alarm
+  installability investigation (code was correct; the wall was not).
