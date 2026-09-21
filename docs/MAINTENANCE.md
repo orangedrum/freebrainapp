@@ -79,7 +79,6 @@
   alias conventions.
 
 ## Preview deployments (Vercel)
-
 - Vercel **Deployment Protection (SSO wall)** on preview URLs breaks PWA
   verification AND real-user testing: manifest fetches 302 to `/login`
   ("No manifest detected"), and anyone without a Vercel login (i.e. every
