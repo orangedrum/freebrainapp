@@ -6,10 +6,14 @@ import { mockSupabaseClient } from './mockSupabase';
 const supabaseUrl = 'https://omcbwbhtjrozbgvzqdya.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tY2J3Ymh0anJvemJndnpxZHlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzOTYwMDAsImV4cCI6MjA2OTk3MjAwMH0.n60lDzNIU7kJILSxx5H20gZRQ6yteyxEkkj0aM6jRiU';
 
+// Exported for the parent allowlist guide (shows families which domains to
+// allow on a child's restricted phone). No behavior change.
+
 // ── Export the real or mock client based on dev-bypass mode ──
 // In dev-bypass (admin proxy), use the mock client that reads/writes localStorage.
 // In production, use the real Supabase client.
 // This means ALL hooks use the same code — no `if (isDevBypassUser())` branches needed.
+export const SUPABASE_URL = supabaseUrl;
 const realClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
 export const supabase = isDevBypassMode()

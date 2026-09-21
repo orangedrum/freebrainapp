@@ -23,6 +23,8 @@ import {
   type NotificationPrefs,
   type NotificationChannel,
 } from "@/lib/notificationPreferences";
+import { subscribePush, unsubscribePush } from "@/lib/pushSubscriptions";
+import { useToast } from "@/hooks/use-toast";
 
 interface NotificationPreferencesProps {
   userId: string;
@@ -31,7 +33,9 @@ interface NotificationPreferencesProps {
 
 export const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ userId, role }) => {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
 
   // Load prefs on mount (and when user/role changes)
   useEffect(() => {
@@ -49,8 +53,34 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     [userId]
   );
 
-  const toggleChannel = (channel: NotificationChannel, value: boolean) => {
+  const toggleChannel = async (channel: NotificationChannel, value: boolean) => {
     if (!prefs) return;
+    // Push ON means a real browser subscription (permission + VAPID +
+    // push_subscriptions row). If that fails (denied/unsupported), leave the
+    // toggle OFF and say why instead of a dead toggle.
+    if (channel === "push") {
+      if (value) {
+        setPushBusy(true);
+        try {
+          const ok = await subscribePush(userId);
+          if (!ok) {
+            toast({
+              title: t("notifications.pushFailed", "Couldn't enable push"),
+              description: t(
+                "notifications.pushFailedDesc",
+                "Permission was denied or this browser can't receive pushes. In-app notifications still work."
+              ),
+              variant: "destructive",
+            });
+            return;
+          }
+        } finally {
+          setPushBusy(false);
+        }
+      } else {
+        await unsubscribePush(userId);
+      }
+    }
     updatePrefs({
       ...prefs,
       channels: { ...prefs.channels, [channel]: value },
@@ -108,6 +138,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
               </div>
               <Switch
                 checked={prefs.channels[ch.key]}
+                disabled={ch.key === "push" && pushBusy}
                 onCheckedChange={(val) => toggleChannel(ch.key, val)}
               />
             </div>

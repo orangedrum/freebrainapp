@@ -80,6 +80,7 @@ export function KeepMovingCard() {
                   patientId={user?.id || ""}
                   patientName={user?.user_metadata?.full_name || ""}
                   brainloverId={user?.id || ""}
+                  bonusPoints={5}
                 />
               </div>
             </div>

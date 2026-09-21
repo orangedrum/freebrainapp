@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Volume2, Mail, CheckCircle2, ArrowRight, Smartphone } from "lucide-react";
+import { Volume2, Mail, CheckCircle2, ArrowRight, Smartphone, Loader2, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { isDevBypassUser } from "@/lib/devBypass";
 import { IOSInstallGuide } from "@/components/shared/IOSInstallGuide";
 import { getOtpRedirectUrl } from "@/lib/otpRedirect";
 import { useAuth } from "@/contexts/AuthContext";
-import { getDefaultRouteForRole } from "@/components/auth/RoleGuards";
 
 // Detect iOS for showing the manual install guide
 const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -26,6 +25,10 @@ interface StepMagicLinkAuthProps {
   customSubtitle?: string;
   /** Optional custom send button label */
   customButtonLabel?: string;
+  /** If provided, show confirmation message instead of email input */
+  email?: string | null;
+  /** Callback to resend the magic link */
+  onResend?: () => void;
 }
 
 export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
@@ -35,53 +38,62 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
   customTitle,
   customSubtitle,
   customButtonLabel,
+  email,
+  onResend,
 }) => {
   const { t } = useTranslation();
   const { session } = useAuth();
   const location = useLocation();
-  const [email, setEmail] = useState("");
+  const [emailInput, setEmailInput] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
   const isDevBypass = isDevBypassUser(undefined);
+
+  // ── Confirmation mode (email pre-captured): session matching ──
+  // There is deliberately NO Continue button here. Forward motion happens
+  // ONLY by auto-advancing when the signed-in session provably owns the
+  // listed address (magic-link click = email confirmation). A mismatched
+  // session (e.g. the parent verified on this same browser) must NEVER be
+  // able to complete this onboarding — that would write one person's data
+  // onto another person's account.
+  const stateEmail = (email || "").trim().toLowerCase();
+  const sessionEmail = session?.user?.email?.toLowerCase() || null;
+  const emailMatches = !!stateEmail && sessionEmail === stateEmail;
+  const sessionVerified = !!session?.user && (!!session.user.email_confirmed_at || isDevBypass);
+  const advancedRef = useRef(false);
+  useEffect(() => {
+    if (!email || emailSent || advancedRef.current) return;
+    if (sessionVerified && emailMatches) {
+      advancedRef.current = true;
+      onComplete();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email, emailSent, sessionVerified, emailMatches]);
+
+  const handleSignOutMismatch = async () => {
+    setSigningOut(true);
+    try {
+      await supabase.auth.signOut();
+      window.location.reload();
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!emailInput.trim()) return;
 
     setIsLoading(true);
     setErrorMessage("");
 
     try {
-      const userRole = session?.user
-        ? (await supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle())?.data?.role ?? null
-        : null;
-      const profileRes = session?.user
-        ? await supabase.from("profiles").select("onboarding_completed").eq("user_id", session.user.id).maybeSingle()
-        : null;
-      const alreadyOnboarded = !!userRole && !!(profileRes?.data as any)?.onboarding_completed;
-
-      // ── Verified session: no second email needed ──
-      // A session here means the user already proved their email (e.g. via the
-      // invite magic link). Calling onComplete() now triggers handleComplete /
-      // handleCompleteBrainLover which perform the Supabase writes immediately —
-      // no device-scoped pendingOnboarding detour, so finishing on one device
-      // never bounces the user back to the start of onboarding on another.
-      if (session?.user) {
-        if (alreadyOnboarded) {
-          window.location.href = getDefaultRouteForRole(userRole);
-        } else {
-          onComplete();
-        }
-        return;
-      }
-
-      const redirectPath = alreadyOnboarded
-        ? getDefaultRouteForRole(userRole)
-        : `/onboarding${location.search || "?install=1"}`;
+      const redirectPath = `/onboarding${location.search || "?install=1"}`;
 
       const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
+        email: emailInput.trim(),
         options: {
           emailRedirectTo: getOtpRedirectUrl(redirectPath),
           shouldCreateUser: true,
@@ -92,9 +104,6 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
         setErrorMessage(error.message);
       } else {
         setEmailSent(true);
-        // No session yet (>email verification pending). Save onboarding state to
-        // localStorage so the resume effect completes the writes AFTER the user
-        // clicks the magic link and gets a verified session.
         onComplete();
       }
     } catch (err: any) {
@@ -131,30 +140,98 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
         )}
       </div>
 
-      {emailSent ? (
+      {email && !emailSent ? (
+        <Card className="border-2 border-primary/20 bg-primary/5">
+          <CardContent className="p-6 md:p-8 flex flex-col items-center text-center space-y-4">
+            <Mail className="h-16 w-16 text-primary animate-bounce" />
+            <h3 className="text-2xl font-bold">
+              {t("onboarding.magicAuth.lastStepTitle", "Last Step!")}
+            </h3>
+            <p className="text-lg text-muted-foreground max-w-md">
+              {t("onboarding.magicAuth.lastStepDesc", "Go check your email on your phone!")}
+            </p>
+            <p className="text-base text-muted-foreground max-w-md">
+              {t("onboarding.magicAuth.confirmationSent", "We sent a confirmation email to this email:")}{" "}
+              <strong className="text-foreground">{email}</strong>
+            </p>
+            {sessionVerified && emailMatches ? (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                <p className="text-lg font-semibold">
+                  {t("onboarding.magicAuth.verifiedTitle", "Email verified! Setting up your account…")}
+                </p>
+              </div>
+            ) : (
+              <>
+                {session?.user && !emailMatches && (
+                  <div className="w-full p-4 bg-warning/10 border border-warning/30 rounded-xl text-left space-y-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      {t("onboarding.magicAuth.mismatchTitle", "Wrong account for this signup")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("onboarding.magicAuth.mismatchDesc", {
+                        signedIn: sessionEmail || "",
+                        expected: stateEmail,
+                        defaultValue: `This browser is signed in as ${sessionEmail || "someone else"}, but this signup is for ${stateEmail}. Sign out first, then open your own link.`,
+                      })}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSignOutMismatch}
+                      disabled={signingOut}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {t("onboarding.magicAuth.mismatchSignOut", "Sign out")}
+                    </Button>
+                  </div>
+                )}
+                {onResend && (
+                  <Button variant="outline" size="sm" onClick={onResend} className="mt-2">
+                    {t("onboarding.magicAuth.resend", "Resend link")}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
+            <div className="w-full p-4 rounded-xl bg-info/10 border border-info/30 text-left">
+              <p className="text-sm font-semibold text-foreground">
+                {t("onboarding.magicAuth.invitesDeferredTitle", "Invited parties will be notified after you confirm")}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("onboarding.magicAuth.invitesDeferredDesc", "Any FreeBrainers or BrainLovers you invited during onboarding will receive their invitation once you confirm your email and your account is active.")}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : emailSent ? (
         <Card className="border-2 border-primary/20 bg-primary/5">
           <CardContent className="p-6 md:p-8 flex flex-col items-center text-center space-y-4">
             <CheckCircle2 className="h-16 w-16 text-primary animate-bounce" />
             <h3 className="text-2xl font-bold">
-              {t("onboarding.magicAuth.sentTitle", "Check Your Inbox!")}
+              {t("onboarding.magicAuth.sentTitle", "One More Step!")}
             </h3>
             <p className="text-lg text-muted-foreground max-w-md">
               {t("onboarding.magicAuth.sentDesc", "We sent a magic login link to")}{" "}
-              <strong className="text-foreground">{email}</strong>. Click the link in your email to log in and access your dashboard.
+              <strong className="text-foreground">{email}</strong>.
             </p>
+            <p className="text-base text-muted-foreground max-w-md">
+              {t("onboarding.magicAuth.confirmInstructions", "Click the link in your email to confirm your account and access your dashboard.")}
+            </p>
+            <div className="w-full p-4 rounded-xl bg-info/10 border border-info/30 text-left">
+              <p className="text-sm font-semibold text-foreground">
+                {t("onboarding.magicAuth.invitesDeferredTitle", "Invited parties will be notified after you confirm")}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("onboarding.magicAuth.invitesDeferredDesc", "Any FreeBrainers or BrainLovers you invited during onboarding will receive their invitation once you confirm your email and your account is active.")}
+              </p>
+            </div>
             <div className="pt-2 text-sm text-muted-foreground">
               {t("onboarding.magicAuth.spamNotice", "Didn't receive it? Check your spam folder or try re-entering your email.")}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEmailSent(false)}
-              className="mt-2"
-            >
+            <Button variant="outline" size="sm" onClick={() => setEmailSent(false)} className="mt-2">
               {t("onboarding.magicAuth.tryAnother", "Try another email")}
             </Button>
-
-            {/* Dev-bypass: show a "Continue to Dashboard" button since no real email verification is needed */}
             {isDevBypass && (
               <Button
                 className="w-full h-14 text-lg mt-2"
@@ -176,7 +253,6 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
                 <p className="text-xs text-muted-foreground">
                   {t("pwa.onboarding.nudgeDesc", "Tap the link from your phone to install FreeBrain as an app — quick daily check-ins right from your home screen.")}
                 </p>
-                {/* iOS: show the 3-step guide inline since there's no native prompt */}
                 {isIOSDevice && (
                   <div className="mt-3">
                     <IOSInstallGuide />
@@ -197,8 +273,8 @@ export const StepMagicLinkAuth: React.FC<StepMagicLinkAuthProps> = ({
               type="email"
               required
               placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
               className="h-16 text-xl border-2"
             />
           </div>

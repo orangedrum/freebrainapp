@@ -17,11 +17,14 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity, Brain, ArrowLeft, Heart } from "lucide-react";
+import { Activity, Brain, ArrowLeft, Heart, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getOtpRedirectUrl } from "@/lib/otpRedirect";
+import { isDevBypassUser } from "@/lib/devBypass";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
+import { StepAgeGate } from "@/components/onboarding/StepAgeGate";
 import { StepCondition } from "@/components/onboarding/StepCondition";
 import { StepMobility } from "@/components/onboarding/StepMobility";
 import { StepSymptoms } from "@/components/onboarding/StepSymptoms";
@@ -31,6 +34,7 @@ import { StepBrainLoverFlow } from "@/components/onboarding/StepBrainLoverFlow";
 import { FreeBrainerSteps } from "@/components/onboarding/FreeBrainerSteps";
 import { StepMagicLinkAuth } from "@/components/onboarding/StepMagicLinkAuth";
 import { StepInstallApp } from "@/components/onboarding/StepInstallApp";
+import { StepConsent } from "@/components/onboarding/StepConsent";
 import type { ManagementMode } from "@/components/onboarding/bl/BLStepManagementMode";
 
 import { useOnboardingSubmit, type OnboardingState } from "@/features/onboarding/useOnboardingSubmit";
@@ -42,7 +46,7 @@ import { computeInviteIntent, type InviteKind } from "@/lib/inviteRouting";
 
 export default function Onboarding() {
   const { t } = useTranslation();
-  const { session, refreshRole, user } = useAuth();
+  const { session, refreshRole, user, onboardingCompleted } = useAuth();
   const { toast } = useToast();
   const speak = useSpeak();
   const { isProcessing: photoProcessing, handlePhotoUpload } = usePhotoUpload();
@@ -65,6 +69,7 @@ export default function Onboarding() {
   const [fbNameParam, setFbNameParam] = useState<string | null>(urlFbName || null);
   const [fbAvatarParam, setFbAvatarParam] = useState<string | null>(null);
   const [inviterNameParam, setInviterNameParam] = useState<string | null>(urlInviterName || null);
+  const [caregiverType, setCaregiverType] = useState<"personal" | "professional" | "parent" | null>(null);
 
   // ── Recover invite context from all sources ──
   // Supabase magic links strip query params from the redirect URL.
@@ -79,26 +84,34 @@ export default function Onboarding() {
 
       // 1. Check session user_metadata (survives magic link redirect for NEW users)
       const meta = (session?.user as any)?.user_metadata;
-      if (meta?.fb_invite_patient_id) {
-        resolvedPatientId = meta.fb_invite_patient_id;
+      if (meta?.fb_invite_patient_id || meta?.fb_invite_kind === "parent_invite") {
+        resolvedPatientId = meta.fb_invite_patient_id || resolvedPatientId;
         resolvedCaregiverId = resolvedCaregiverId || meta.fb_invite_caregiver_id;
         resolvedFbName = resolvedFbName || meta.fb_invite_patient_name;
         resolvedFbAvatar = meta.fb_invite_patient_avatar || null;
         resolvedInviterName = resolvedInviterName || meta.fb_invite_inviter_name;
+        if (meta.fb_invite_kind === "parent_invite") {
+          setCaregiverType("parent");
+        }
         console.log("[FB-DEBUG] Onboarding: recovered invite context from user_metadata:", meta);
       }
 
       // 2. Check localStorage (email-specific key)
-      if (!resolvedPatientId && session?.user?.email) {
+      // Also check for kind=parent_invite even when no patientId — parent invites
+      // don't have a patient ID yet (child hasn't completed onboarding).
+      if (session?.user?.email) {
         const stored = localStorage.getItem(`fb_invite_${session.user.email.toLowerCase()}`);
         if (stored) {
           try {
             const ctx = JSON.parse(stored);
-            resolvedPatientId = ctx.patientId || null;
+            resolvedPatientId = ctx.patientId || resolvedPatientId;
             resolvedCaregiverId = ctx.caregiverId || resolvedCaregiverId;
             resolvedFbName = ctx.patientName || resolvedFbName;
             resolvedFbAvatar = ctx.patientAvatar || resolvedFbAvatar;
             resolvedInviterName = ctx.inviterName || resolvedInviterName;
+            if (ctx.kind === "parent_invite") {
+              setCaregiverType("parent");
+            }
             console.log("[FB-DEBUG] Onboarding: recovered invite context from localStorage:", ctx);
           } catch (e) { /* ignore */ }
         }
@@ -131,12 +144,28 @@ export default function Onboarding() {
         }
       }
 
-      if (resolvedPatientId) {
+      if (resolvedPatientId || resolvedFbName || resolvedInviterName) {
+        // Last resort for the name/avatar: any earlier invite that named this
+        // patient (the link may carry no fb_name, and the patient's profiles
+        // row is RLS-invisible to not-yet-linked invitees).
+        if (!resolvedFbName && resolvedPatientId) {
+          try {
+            const { fetchInviteByPatientId } = await import("@/lib/brainloverInvites");
+            const named = await fetchInviteByPatientId(resolvedPatientId);
+            if (named?.patientName) {
+              resolvedFbName = named.patientName;
+              resolvedFbAvatar = resolvedFbAvatar || named.patientAvatar;
+              console.log("[FB-DEBUG] Onboarding: recovered patient name from earlier invite row:", named.patientName);
+            }
+          } catch (e) {
+            console.warn("[FB-DEBUG] Onboarding patient-name fallback failed (non-fatal):", e);
+          }
+        }
         setPatientId(resolvedPatientId);
         setInviteCaregiverId(resolvedCaregiverId);
-        setFbNameParam(resolvedFbName);
-        setFbAvatarParam(resolvedFbAvatar);
-        setInviterNameParam(resolvedInviterName);
+        if (resolvedFbName) setFbNameParam(resolvedFbName);
+        if (resolvedFbAvatar) setFbAvatarParam(resolvedFbAvatar);
+        if (resolvedInviterName) setInviterNameParam(resolvedInviterName);
       }
     })();
   }, [session, patientId]);
@@ -152,6 +181,7 @@ export default function Onboarding() {
     fbName: fbNameParam,
     inviterName: urlInviterName,
     kind: inviteKind,
+    caregiverType: caregiverType,
   });
   // ── Invariant: an existing FreeBrainer is pinned ⇒ the invitee is a
   //    secondary BrainLover. They ALWAYS get the invited BrainLover onboarding
@@ -159,7 +189,7 @@ export default function Onboarding() {
   //    holds regardless of which caller sent the invite (teams, love, onboarding).
   const pinnedToExistingFb = inviteIntent.kind === "support_existing_fb";
   const resolvedFlow = pinnedToExistingFb ? "brainlover" : (urlFlow || inviteIntent.flow);
-  const startStep = pinnedToExistingFb ? Math.max(2, initialStep) : initialStep;
+  const startStep = inviteIntent.invited ? Math.max(2, initialStep) : initialStep;
   const [step, setStep] = useState(startStep);
   const [flowType, setFlowType] = useState<"freebrainer" | "brainlover">(resolvedFlow);
   const [patientInfo, setPatientInfo] = useState<{ name: string; avatar: string | null } | null>(null);
@@ -176,6 +206,16 @@ export default function Onboarding() {
     }
   }, [patientId, flowType, urlFlow, pinnedToExistingFb, step]);
 
+  // Update flowType for parent invites — parent lands on /onboarding with no
+  // patient context (child hasn't completed onboarding yet). caregiverType is
+  // recovered from localStorage/user_metadata in the invite context effect above.
+  useEffect(() => {
+    if (caregiverType === "parent" && flowType !== "brainlover") {
+      setFlowType("brainlover");
+      if (step < 2) setStep(2);
+    }
+  }, [caregiverType, flowType, step]);
+
   // ── FreeBrainer state ──
   const [conditions, setConditions] = useState<string[]>([]);
   const [conditionSearch, setConditionSearch] = useState("");
@@ -189,13 +229,13 @@ export default function Onboarding() {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
   const [shareConsent, setShareConsent] = useState(true);
   const [diagnosisStory, setDiagnosisStory] = useState("");
   const [location, setLocation] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── BrainLover state ──
-  const [caregiverType, setCaregiverType] = useState<"personal" | "professional" | null>(null);
   const [facility, setFacility] = useState("");
   const [connectionMethod, setConnectionMethod] = useState<"invite" | "code" | null>(null);
   const [connectionCode, setConnectionCode] = useState("");
@@ -257,11 +297,12 @@ export default function Onboarding() {
 
   // ── Assemble state object for submit hook ──
   const onboardingState: OnboardingState = {
-    conditions, mobility, symptoms, movementDays, brainLoverEmail,
+    conditions, mobility, symptoms, movementDays, brainLoverEmail, email,
     diagnosisStory, shareConsent, location, photo, displayName,
     selectedTeam, teamCode, inviteCaregiverId,
     caregiverType, facility, patientEmail, connectionMethod, patientId,
     managementMode, subAccountPatientId, foundPatientId,
+    currentStep: step,
     // ── Sub-account form data (for re-creating in Supabase after auth) ──
     subAccountName: subAccountName || null,
     subAccountConditions: subAccountFormData.conditions || null,
@@ -321,7 +362,83 @@ export default function Onboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
-  // ── Wellness continue: skip obsolete step 5, go to step 6 ──
+  // ── Step 14 (FreeBrainer): auto-send OTP + stash pending ──
+  // Email was captured at the age gate (step 2), so when the user reaches
+  // step 14 with no session yet, send the confirmation OTP immediately (once
+  // per email) and persist pendingOnboarding for the post-magic-link resume
+  // effect above.
+  useEffect(() => {
+    if (flowType !== "freebrainer" || step !== 14) return;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || session?.user || isDevBypassUser(undefined)) return;
+    const sentFlag = `fb_otp_sent_${cleanEmail}`;
+    if (localStorage.getItem(sentFlag)) return;
+    localStorage.setItem(sentFlag, "1");
+    (async () => {
+      try {
+        const redirectPath = `/onboarding${window.location.search || "?install=1"}`;
+        await supabase.auth.signInWithOtp({
+          email: cleanEmail,
+          options: { emailRedirectTo: getOtpRedirectUrl(redirectPath), shouldCreateUser: true },
+        });
+      } catch (e) {
+        console.warn("[FB-DEBUG] auto-send OTP failed (non-fatal):", (e as any)?.message);
+      }
+      await handleComplete(undefined, true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, flowType, email, session]);
+
+  // ── Step 14: never ask a verified session to type their email ──
+  // If the user reaches the magic-link step WITH a session (resumed child,
+  // returning user), the address is already proven — adopt it so the
+  // confirmation card renders instead of a redundant email form.
+  useEffect(() => {
+    if (flowType !== "freebrainer" || step !== 14) return;
+    if (email.trim() || !session?.user?.email) return;
+    setEmail(session.user.email);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, flowType, session]);
+
+  // ── Child resume: a waiting child who clicked their finish-link ──
+  // The child stopped at the age gate (step 2); the parent's completion
+  // emailed them a finish-link. Landing here with a fresh session, recover
+  // name/photo by child_email (invite row = single source of truth) and
+  // resume at step 12 (first movement). Skipped when pendingOnboarding exists
+  // (the resume effect above owns that case) and after onboarding completes.
+  const hydratedChildRef = useRef(false);
+  const initialStepRef = useRef(initialStep);
+  useEffect(() => {
+    if (hydratedChildRef.current) return;
+    if (flowType !== "freebrainer" || step !== initialStepRef.current) return;
+    if (!session?.user || onboardingCompleted) return;
+    if (localStorage.getItem("pendingOnboarding")) return;
+    const sessionEmail = session.user.email?.toLowerCase();
+    if (!sessionEmail) return;
+    const wantsResume = (session.user.user_metadata as any)?.fb_child_finish === "1";
+    (async () => {
+      try {
+        const { fetchInviteByChildEmail } = await import("@/lib/brainloverInvites");
+        const invite = await fetchInviteByChildEmail(sessionEmail);
+        // Only resume if this email is a known waiting child whose link
+        // hasn't been consumed (patient_id set = already finished).
+        if (!invite || invite.patientId) return;
+        if (!wantsResume && !invite.childName && !invite.childAvatar) return;
+        hydratedChildRef.current = true;
+        setEmail(sessionEmail);
+        if (invite.childName) setDisplayName(invite.childName);
+        if (invite.childAvatar) setPhoto(invite.childAvatar);
+        setFlowType("freebrainer");
+        setStep(12);
+        console.log("[FB-DEBUG] child resume hydrated from invite row:", { sessionEmail, hasName: !!invite.childName });
+      } catch (e) {
+        console.warn("[FB-DEBUG] child resume hydration failed (non-fatal):", e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, onboardingCompleted, flowType, step]);
+
+  // ── Wellness continue: symptoms → profile (step 6) ──
   const handleWellnessContinue = () => {
     const selected = symptomText.split(",").map((s) => s.trim()).filter((s) => s.length > 0).slice(0, 6);
     setSymptoms(selected);
@@ -372,15 +489,31 @@ const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 :
             {/* Step 1: Role selection */}
             {step === 1 && <StepRoleSelectionInline t={t} setFlowType={setFlowType} setCaregiverType={setCaregiverType} setStep={setStep} />}
 
-            {/* FREEBRAINER FLOW */}
+            {/* FREEBRAINER FLOW — age gate first (step 2): no PII is
+                collected before we know whether this is an adult or a child.
+                Under-18s stop at step 2 on the parent-waiting screen. */}
             {flowType === "freebrainer" && step === 2 && (
-              <StepCondition conditions={conditions} setConditions={setConditions} conditionSearch={conditionSearch} setConditionSearch={setConditionSearch} onNext={() => setStep(3)} onBack={() => setStep(1)} speak={speak} />
+              <StepAgeGate
+                purpose="child"
+                onComplete={() => setStep(3)}
+                onBack={() => setStep(1)}
+                childName={displayName}
+                childPhoto={photo}
+                email={email || null}
+                onEmailChange={setEmail}
+                onNameChange={setDisplayName}
+                fileInputRef={fileInputRef}
+                onPhotoUpload={onPhotoUpload}
+              />
             )}
             {flowType === "freebrainer" && step === 3 && (
-              <StepMobility mobility={mobility} setMobility={setMobility} onNext={() => setStep(4)} onBack={() => setStep(2)} speak={speak} />
+              <StepCondition conditions={conditions} setConditions={setConditions} conditionSearch={conditionSearch} setConditionSearch={setConditionSearch} onNext={() => setStep(4)} onBack={() => setStep(2)} speak={speak} />
             )}
             {flowType === "freebrainer" && step === 4 && (
-              <StepSymptoms symptomText={symptomText} setSymptomText={setSymptomText} onContinue={handleWellnessContinue} onBack={() => setStep(3)} speak={speak} />
+              <StepMobility mobility={mobility} setMobility={setMobility} onNext={() => setStep(5)} onBack={() => setStep(3)} speak={speak} />
+            )}
+            {flowType === "freebrainer" && step === 5 && (
+              <StepSymptoms symptomText={symptomText} setSymptomText={setSymptomText} onContinue={handleWellnessContinue} onBack={() => setStep(4)} speak={speak} />
             )}
             {flowType === "freebrainer" && step >= 6 && step <= 11 && (
               <FreeBrainerSteps
@@ -390,8 +523,8 @@ const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 :
                 locationResults={locationResults} setLocation={setLocation} setLocationResults={setLocationResults}
                 brainLoverEmail={brainLoverEmail} setBrainLoverEmail={setBrainLoverEmail}
                 movementDays={movementDays} setMovementDays={setMovementDays}
-                teamCode={teamCode} setTeamCode={setTeamCode} teamSearchQuery={teamSearchQuery}
-                setTeamSearchQuery={setTeamSearchQuery} selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam}
+                teamCode={teamCode} setTeamCode={setTeamCode} teamSearchQuery={teamSearchQuery} setTeamSearchQuery={setTeamSearchQuery}
+                selectedTeam={selectedTeam} setSelectedTeam={setSelectedTeam}
                 isIOS={isIOS} shareConsent={shareConsent} setShareConsent={setShareConsent}
                 diagnosisStory={diagnosisStory} setDiagnosisStory={setDiagnosisStory} speak={speak} toast={toast}
               />
@@ -401,14 +534,29 @@ const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 :
               <StepConfirmation step={step} onNext={() => setStep(14)} onComplete={() => setStep(14)} isProcessing={isProcessing} speak={speak} />
             )}
             {flowType === "freebrainer" && step === 14 && (
-              <StepMagicLinkAuth
-                onComplete={async () => {
-                  const success = await handleComplete();
-                  if (success) setStep(15);
-                }}
-                isProcessing={isProcessing || photoProcessing}
-                speak={speak}
-              />
+<StepMagicLinkAuth
+                  email={email || null}
+                  onResend={async () => {
+                    const redirectPath = `/onboarding${window.location.search || "?install=1"}`;
+                    const { error } = await supabase.auth.signInWithOtp({
+                      email: email.trim(),
+                      options: {
+                        emailRedirectTo: getOtpRedirectUrl(redirectPath),
+                        shouldCreateUser: true,
+                      },
+                    });
+                    if (!error) {
+                      localStorage.setItem(`fb_otp_sent_${email.trim().toLowerCase()}`, "1");
+                      await handleComplete(undefined, true);
+                    }
+                  }}
+                  onComplete={async () => {
+                    const success = await handleComplete();
+                    if (success) setStep(15);
+                  }}
+                 isProcessing={isProcessing || photoProcessing}
+                 speak={speak}
+               />
             )}
             {flowType === "freebrainer" && step === 15 && (
               <StepInstallApp
@@ -421,30 +569,31 @@ const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 :
               />
             )}
 
-            {/* BRAINLOVER FLOW (step ≥ 2 only — step 1 is role selection) */}
-            {flowType === "brainlover" && step >= 2 && (
-              <StepBrainLoverFlow
-                step={step} setStep={setStep}
-                displayName={displayName} setDisplayName={setDisplayName}
-                photo={photo} fileInputRef={fileInputRef} onPhotoUpload={onPhotoUpload}
-                location={location} setLocation={setLocation}
-                searchLocation={searchLocation}
-                locationResults={locationResults} onSelectLocation={(loc) => { setLocation(loc); setLocationResults([]); }}
-                managementMode={managementMode} setManagementMode={setManagementMode}
-                caregiverId={session?.user?.id || "dev-user-id"}
-                patientEmail={patientEmail} setPatientEmail={setPatientEmail}
-                onFoundFreeBrainer={setFoundPatientId}
-                foundPatientId={foundPatientId}
-                onSubAccountCreated={(pid, name, formData) => { setSubAccountPatientId(pid); setSubAccountName(name); if (formData) setSubAccountFormData(formData); }}
-                freeBrainerName={subAccountName || patientInfo?.name || fbNameParam || ""}
-                freeBrainerAvatar={patientInfo?.avatar || fbAvatarParam || null}
-                handleCompleteBrainLover={handleCompleteBrainLover}
-                isProcessing={isProcessing} speak={speak}
-                isInvited={!!patientId}
-                inviterName={inviterNameParam || null}
-                subAccountPatientId={subAccountPatientId}
-              />
-            )}
+                {/* BRAINLOVER FLOW (step ≥ 2 only — step 1 is role selection) */}
+                {flowType === "brainlover" && step >= 2 && (
+                  <StepBrainLoverFlow
+                    step={step} setStep={setStep}
+                    displayName={displayName} setDisplayName={setDisplayName}
+                    photo={photo} fileInputRef={fileInputRef} onPhotoUpload={onPhotoUpload}
+                    location={location} setLocation={setLocation}
+                    searchLocation={searchLocation}
+                    locationResults={locationResults} onSelectLocation={(loc) => { setLocation(loc); setLocationResults([]); }}
+                    managementMode={managementMode} setManagementMode={setManagementMode}
+                    caregiverId={session?.user?.id || "dev-user-id"}
+                    patientEmail={patientEmail} setPatientEmail={setPatientEmail}
+                    onFoundFreeBrainer={setFoundPatientId}
+                    foundPatientId={foundPatientId}
+                    onSubAccountCreated={(pid, name, formData) => { setSubAccountPatientId(pid); setSubAccountName(name); if (formData) setSubAccountFormData(formData); }}
+                    freeBrainerName={subAccountName || patientInfo?.name || fbNameParam || ""}
+                    freeBrainerAvatar={patientInfo?.avatar || fbAvatarParam || null}
+                    handleCompleteBrainLover={handleCompleteBrainLover}
+                    isProcessing={isProcessing} speak={speak}
+                    isInvited={!!patientId || inviteKind === "parent_invite" || caregiverType === "parent"}
+                    inviterName={inviterNameParam || null}
+                    subAccountPatientId={subAccountPatientId}
+                    caregiverType={caregiverType}
+                  />
+                )}
           </CardContent>
         </Card>
       </div>
@@ -456,7 +605,7 @@ const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 :
 function StepRoleSelectionInline({ t, setFlowType, setCaregiverType, setStep }: {
   t: any;
   setFlowType: (f: "freebrainer" | "brainlover") => void;
-  setCaregiverType: (c: "personal" | "professional" | null) => void;
+  setCaregiverType: (c: "personal" | "professional" | "parent" | null) => void;
   setStep: (s: number) => void;
 }) {
   return (
@@ -485,6 +634,14 @@ function StepRoleSelectionInline({ t, setFlowType, setCaregiverType, setStep }: 
           <div>
             <div className="font-bold text-lg md:text-xl">{t("onboarding.step1.brainfreeer")}</div>
             <div className="text-sm md:text-base text-muted-foreground font-normal mt-1">{t("onboarding.step1.brainfreeerDesc")}</div>
+          </div>
+        </Button>
+        <Button variant="outline" className="w-full h-auto p-4 md:p-5 justify-start border-2 hover:border-primary hover:bg-primary/5 whitespace-normal text-left"
+          onClick={() => { setFlowType("brainlover"); setCaregiverType("parent"); setStep(2); }}>
+          <Users className="h-8 w-8 md:h-10 md:w-10 mr-4 text-primary shrink-0" />
+          <div>
+            <div className="font-bold text-lg md:text-xl">{t("onboarding.step1.parent")}</div>
+            <div className="text-sm md:text-base text-muted-foreground font-normal mt-1">{t("onboarding.step1.parentDesc")}</div>
           </div>
         </Button>
       </div>

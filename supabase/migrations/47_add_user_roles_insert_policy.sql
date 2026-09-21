@@ -19,5 +19,5 @@ ON public.user_roles FOR INSERT
 TO authenticated
 WITH CHECK (auth.uid() = user_id);
 
--- Ensure all existing user_roles rows are accessible (SELECT already works)
+-- Ensure all existing user_roles rows remain accessible (SELECT already works)
 SELECT 'user_roles insert policy added' as status;

@@ -1,7 +1,7 @@
 /**
  * inviteRouting — the invite → onboarding state machine (single source of truth).
  *
- * Every invite is reduced to ONE of four intents. The intent is produced ONCE
+ * Every invite is reduced to ONE of five intents. The intent is produced ONCE
  * (in JoinTeam after resolving all context sources + URL params) and then
  * consumed by Onboarding — never re-derived from stacked fallbacks. This kills
  * the class of bugs where a link's semantics drifted across callers (e.g. the
@@ -10,13 +10,21 @@
  *
  * Senders append an explicit `kind` param so JoinTeam does not have to guess.
  * Legacy links without `kind` are still resolved via the fallback rules below.
+ *
+ * PARENT INVITES:
+ *   When kind === "parent_invite", the invitee is a parent/guardian being
+ *   invited by their child (a FreeBrainer). The parent flow reuses the
+ *   invited brainlover components with two additions:
+ *   - Age gate (18+ check)
+ *   - Consent checkbox ("I consent to my child using FreeBrain")
  */
 
 export type InviteKind =
   | "support_existing_fb"
   | "join_as_freebrainer"
   | "join_as_brainlover"
-  | "team_only";
+  | "team_only"
+  | "parent_invite";
 
 export interface InviteRouteInput {
   teamId: string | null;
@@ -26,6 +34,8 @@ export interface InviteRouteInput {
   inviterName: string | null;
   /** Explicit kind carried by the invite link (may be null for legacy links). */
   kind: InviteKind | null;
+  /** Caregiver type for the invitee (e.g., "parent" for parent invites). */
+  caregiverType?: "personal" | "professional" | "parent" | null;
 }
 
 export interface InviteIntent {
@@ -35,6 +45,8 @@ export interface InviteIntent {
   caregiverId: string | null;
   fbName: string | null;
   inviterName: string | null;
+  /** Caregiver type for the invitee (e.g., "parent" for parent invites). */
+  caregiverType: "personal" | "professional" | "parent" | null;
   /** Onboarding flow the invitee must complete. */
   flow: "freebrainer" | "brainlover";
   /** True when the invitee is a care-giver joining an EXISTING FreeBrainer
@@ -51,6 +63,7 @@ const FLOWS = {
   join_as_freebrainer: { flow: "freebrainer", invited: false, totalSteps: 15 },
   join_as_brainlover: { flow: "brainlover", invited: false, totalSteps: 9 },
   team_only: { flow: "freebrainer", invited: false, totalSteps: 15 },
+  parent_invite: { flow: "brainlover", invited: true, totalSteps: 10 }, // parent flow with age gate + consent
 } as const;
 
 /**
@@ -65,9 +78,17 @@ const FLOWS = {
  * invited BrainLover onboarding (7 steps, step 2 shows the FreeBrainer's
  * picture) — never the primary flow that creates/connects a FreeBrainer they
  * already have. Onboarding.tsx enforces the same rule at rendering time.
+ *
+ * PARENT INVITES:
+ *   When kind === "parent_invite", the invitee is a parent/guardian being
+ *   invited by their child (a FreeBrainer). The parent flow reuses the
+ *   invited brainlover components with two additions:
+ *   - Age gate (18+ check)
+ *   - Consent checkbox ("I consent to my child using FreeBrain")
  */
 export function computeInviteIntent(input: InviteRouteInput): InviteIntent {
   let kind = input.kind;
+  let caregiverType = input.caregiverType ?? null;
 
   if (!kind) {
     if (input.patientId) kind = "support_existing_fb";
@@ -75,6 +96,11 @@ export function computeInviteIntent(input: InviteRouteInput): InviteIntent {
     else kind = "team_only";
   } else if (input.patientId && (kind === "team_only" || kind === "join_as_brainlover")) {
     kind = "support_existing_fb";
+  }
+
+  // Set caregiverType for parent invites
+  if (kind === "parent_invite") {
+    caregiverType = "parent";
   }
 
   const meta = FLOWS[kind] ?? FLOWS.team_only;
@@ -86,6 +112,7 @@ export function computeInviteIntent(input: InviteRouteInput): InviteIntent {
     caregiverId: input.caregiverId,
     fbName: input.fbName,
     inviterName: input.inviterName,
+    caregiverType,
     flow: meta.flow,
     invited: meta.invited,
     totalSteps: meta.totalSteps,
@@ -107,6 +134,7 @@ export function intentToParams(intent: InviteIntent, extra?: Record<string, stri
   if (intent.caregiverId) params.set("caregiver_id", intent.caregiverId);
   if (intent.fbName) params.set("fb_name", intent.fbName);
   if (intent.inviterName) params.set("inviter_name", intent.inviterName);
+  if (intent.caregiverType) params.set("caregiver_type", intent.caregiverType);
   if (extra) {
     for (const [key, value] of Object.entries(extra)) {
       if (value) params.set(key, value);

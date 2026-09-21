@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Globe, Watch, Shield, HeartPulse, Smartphone } from "lucide-react";
+import { Globe, Watch, Shield, HeartPulse, Smartphone, Lock, Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { changeLanguage, getCurrentLanguage } from "@/lib/language";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
@@ -54,6 +55,64 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const pwa = usePWAInstall();
   const [showSendToPhone, setShowSendToPhone] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinSet, setPinSet] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [pinVisible, setPinVisible] = useState(false);
+
+  // Simple hash for PIN storage (not cryptographic — for passcode lock only)
+  const hashPin = (p: string): string => {
+    let h = 0;
+    for (let i = 0; i < p.length; i++) {
+      h = ((h << 5) - h + p.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h).toString(36);
+  };
+
+  // Load PIN from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("fb_parent_pin");
+      if (stored) { setPinSet(true); }
+    } catch {}
+  }, []);
+
+  // Visibility change — lock the dashboard when PWA returns from background
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === "visible" && pinSet) {
+        setShowPinDialog(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [pinSet]);
+
+  const handleSetPin = () => {
+    if (pin.length < 4) { setPinError("PIN must be at least 4 digits."); return; }
+    try {
+      localStorage.setItem("fb_parent_pin", hashPin(pin));
+      setPinSet(true);
+      setPinError("");
+    } catch {}
+  };
+
+  const handlePinVerify = () => {
+    if (!pinSet) { setShowPinDialog(false); return; }
+    try {
+      const stored = localStorage.getItem("fb_parent_pin");
+      if (stored === hashPin(pinInput)) {
+        setPinError("");
+        setShowPinDialog(false);
+      } else {
+        setPinError("Incorrect PIN.");
+      }
+    } catch {
+      setPinError("Verification failed.");
+    }
+  };
 
   // Keep dropdown in sync with i18n runtime changes (from any switcher)
   useEffect(() => {
@@ -149,6 +208,50 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               </div>
             </>
           )}
+
+          {/* Parental PIN Lock */}
+          <div className="border-t pt-4">
+            <div className="space-y-0.5 flex items-center gap-3">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <Label className="font-semibold">{t("profile.pinLockTitle", "Parent PIN Lock")}</Label>
+                <p className="text-sm text-muted-foreground">{t("profile.pinLockDesc", "Protect parent settings with a PIN when the app returns from background")}</p>
+              </div>
+            </div>
+            {pinSet ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => { setShowPinDialog(true); setPinInput(""); setPinError(""); }}
+              >
+                {t("profile.verifyPin", "Verify PIN to access settings")}
+              </Button>
+            ) : (
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    type={pinVisible ? "text" : "password"}
+                    placeholder="4+ digit PIN"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    className="h-10 text-sm font-mono"
+                    maxLength={6}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setPinVisible(!pinVisible)}
+                  >
+                    {pinVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <Button size="sm" onClick={handleSetPin} className="w-full">
+                  {t("profile.setPin", "Set PIN")}
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -195,6 +298,35 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           </CardContent>
         </Card>
       )}
+
+      {/* ── PIN Lock Dialog ── */}
+      <Dialog open={showPinDialog} onOpenChange={(open) => { if (!open) setShowPinDialog(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-primary" />
+              {t("profile.pinLockTitle", "Parent PIN Lock")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("profile.pinEnterDesc", "Enter your PIN to access parent settings")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              type={pinVisible ? "text" : "password"}
+              placeholder="PIN"
+              value={pinInput}
+              onChange={(e) => { setPinInput(e.target.value); setPinError(""); }}
+              className="h-12 text-xl font-mono text-center tracking-[0.5em]"
+              maxLength={6}
+            />
+            {pinError && <p className="text-sm text-destructive">{pinError}</p>}
+            <Button onClick={handlePinVerify} className="w-full">
+              {t("profile.verifyPin", "Verify")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── PWA Install modals (failsafe) ── */}
       <SendToPhoneModal

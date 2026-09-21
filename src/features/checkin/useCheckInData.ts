@@ -15,7 +15,7 @@ import {
   type DeviceMetric,
 } from "@/lib/symptomStorage";
 import { markDevCheckIn, getDevCheckInToday, clearDevCheckIn, isDevBypassUser } from "@/lib/devBypass";
-import { addFreeBrainPoints } from "@/lib/scoreManager";
+import { addFreeBrainPoints, getFreeBrainScore } from "@/lib/scoreManager";
 import { postToWall } from "@/lib/postToWall";
 
 export type CheckinStatus = "moved" | "rest_day" | "flare_up" | null;
@@ -119,6 +119,10 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
   const [userTeam, setUserTeam] = useState<any>(null);
 
   const [mysteryBoxState, setMysteryBoxState] = useState<"hidden" | "spinning" | "revealed">("hidden");
+  // Score BEFORE the latest submit — drives the celebratory before→after
+  // count-up. Captured pre-write; null when unknown (e.g. revealed from a
+  // loaded row, where the fallback derives it as total − earned).
+  const [prevScore, setPrevScore] = useState<number | null>(null);
   const [pointsEarned, setPointsEarned] = useState(0);
   const [smartwatchDetected, setSmartwatchDetected] = useState(false);
   const [deviceMetrics, setDeviceMetrics] = useState<DeviceMetric[]>([]);
@@ -261,6 +265,9 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
         setHasCheckedInToday(true);
         setCheckinStatus(todayCheckin.checkin_status || (todayCheckin.moved ? "moved" : null));
         setNotes(todayCheckin.notes || "");
+        // A loaded row has no known "before" total — clear any stale
+        // prevScore so the celebration falls back to total − earned.
+        setPrevScore(null);
         if (todayCheckin.points_earned) {
           setPointsEarned(todayCheckin.points_earned);
           setMysteryBoxState("revealed");
@@ -271,6 +278,7 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
         setNotes("");
         setMysteryBoxState("hidden");
         setPointsEarned(0);
+        setPrevScore(null);
       }
     } else {
       setHasCheckedInToday(false);
@@ -463,6 +471,13 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
         // silently affects 0 rows — that's OK, the check-in itself still
         // succeeds and the score is tracked in daily_checkins.points_earned.
         if (earned > 0 && writeUserId) {
+          // Capture the pre-write total for the before→after celebration.
+          // Awaited BEFORE the increment so the read can't race the write.
+          try {
+            setPrevScore(await getFreeBrainScore(writeUserId));
+          } catch {
+            setPrevScore(null);
+          }
           addFreeBrainPoints(writeUserId, earned).catch((e) =>
             console.warn("[FB-DEBUG] Score increment after check-in failed:", e)
           );
@@ -552,6 +567,7 @@ export function useCheckInData(opts?: { overrideUserId?: string; overrideEmail?:
     deviceMetrics,
     pointsEarned, setPointsEarned,
     mysteryBoxState, setMysteryBoxState,
+    prevScore,
     today,
     submitCheckIn,
     resetCheckIn,

@@ -29,6 +29,7 @@ export interface OnboardingState {
   symptoms: string[];
   movementDays: number[];
   brainLoverEmail: string;
+  email: string;
   diagnosisStory: string;
   shareConsent: boolean;
   location: string;
@@ -38,7 +39,7 @@ export interface OnboardingState {
   teamCode: string;
   inviteCaregiverId: string | null;
   // BrainLover
-  caregiverType: "personal" | "professional" | null;
+  caregiverType: "personal" | "professional" | "parent" | null;
   facility: string;
   patientEmail: string;
   connectionMethod: "invite" | "code" | null;
@@ -47,6 +48,8 @@ export interface OnboardingState {
   subAccountPatientId: string | null;
   // Found via the "Find your FreeBrainer" directory search (independent mode).
   foundPatientId: string | null;
+  // ── Current onboarding step (for Screen Time session persistence) ──
+  currentStep?: number;
   // ── Sub-account form data (for re-creating in Supabase after auth) ──
   subAccountName?: string | null;
   subAccountConditions?: string | null;
@@ -73,12 +76,12 @@ export function useOnboardingSubmit({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleComplete = useCallback(
-    async (overrideData?: any): Promise<boolean> => {
+    async (overrideData?: any, forcePending = false): Promise<boolean> => {
       setIsProcessing(true);
       const errorLog: string[] = [];
 
-      const s = overrideData
-        ? { ...state, ...overrideData }
+       const s = overrideData
+        ? { ...state, ...Object.fromEntries(Object.entries(overrideData).filter(([, v]) => v != null)) }
         : state;
 
       try {
@@ -88,12 +91,13 @@ export function useOnboardingSubmit({
         // Supabase writes IMMEDIATELY. The pending→resume detour was being
         // used even for authed users, which is device-scoped (localStorage) —
         // clicking the email on a different device then bounced the user back
-        // to the start of onboarding forever.
-        if (!session?.user || (session.user.id === "dev-user-id" && !overrideData)) {
+         // to the start of onboarding forever.
+        if (forcePending || !session?.user || !session.user.email_confirmed_at || (session.user.id === "dev-user-id" && !overrideData)) {
           localStorage.setItem(
             "pendingOnboarding",
-            JSON.stringify({ flowType: "freebrainer", ...s, inviteCaregiverId: state.inviteCaregiverId })
+            JSON.stringify({ flowType: "freebrainer", ...s, inviteCaregiverId: state.inviteCaregiverId, currentStep: state.currentStep ?? 1 })
           );
+          setIsProcessing(false);
           return false;
         }
 
@@ -118,7 +122,10 @@ export function useOnboardingSubmit({
         } else {
           const { error: roleError3 } = await (supabase.from("user_roles") as any)
             .insert({ user_id: session.user.id, role: "freebrainer" });
-          if (roleError3) errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          if (roleError3) {
+            console.warn("[FB-DEBUG] user_roles insert still failing after RLS fix:", roleError3.message);
+            errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          }
         }
 
         // ── Profile upsert ──
@@ -135,6 +142,7 @@ export function useOnboardingSubmit({
           diagnosis_story: s.diagnosisStory,
           share_consent: s.shareConsent,
           total_score: 0,
+          age_verified: true, // User completed age gate during onboarding
         };
 
         if (profileExists) {
@@ -318,9 +326,77 @@ export function useOnboardingSubmit({
         localStorage.removeItem("pendingOnboarding");
         toast({ title: t("onboarding.welcomeToastTitle"), description: t("onboarding.welcomeToastDesc") });
         await refreshRole();
-        // Don't redirect yet — the caller (Onboarding.tsx) will move to step 15 (install app)
-        // The redirect happens when the user clicks "Continue" on the install step.
-        return true;
+        // Update brainlover_invites.patient_id now that the child FreeBrainer
+        // has verified their email and has a real session.user.id.
+        // handleSendParentLink created the row with patient_id = null;
+        // this resolves it so ensureInvitedCaregiverLink can find the invite.
+        // Also populate fb_bl_invites queue so the "Reinvite" CTA works
+        // on the caregiver's dashboard.
+        try {
+          const parentEmail = localStorage.getItem("fb_parent_invite_email");
+          if (parentEmail) {
+            const { error: updateErr } = await supabase.from("brainlover_invites")
+              .update({ patient_id: session.user.id })
+              .eq("invitee_email", parentEmail);
+            if (updateErr) console.warn("[FB-DEBUG] brainlover_invites update error:", updateErr.message);
+            const key = `fb_bl_invites_${session.user.id}`;
+            const raw = localStorage.getItem(key);
+            const list: string[] = raw ? JSON.parse(raw) : [];
+            if (!list.includes(parentEmail)) {
+              list.push(parentEmail);
+              localStorage.setItem(key, JSON.stringify(list));
+            }
+            localStorage.removeItem("fb_parent_invite_email");
+          } else if (session.user.email) {
+            // Cross-device: the parent email lives only in the invite row.
+            // Resolve the row by child_email and stamp patient_id there.
+            const { fetchInviteByChildEmail } = await import("@/lib/brainloverInvites");
+            const byChild = await fetchInviteByChildEmail(session.user.email);
+            if (byChild) {
+              const { error: updateErr } = await supabase.from("brainlover_invites")
+                .update({ patient_id: session.user.id })
+                .eq("child_email", session.user.email.toLowerCase());
+              if (updateErr) console.warn("[FB-DEBUG] brainlover_invites update by child_email error:", updateErr.message);
+            }
+          }
+        } catch (e) {
+          console.warn("[FB-DEBUG] Update brainlover_invites patient_id error (non-fatal):", e);
+        }
+
+        // Parent-invite flow: the parent completed first (role brainlover) and
+        // stamped caregiver_id on the invite row. Now that the child has a
+        // real user id, create the caregiver_links row directly so the parent
+        // dashboard shows the child immediately — no dashboard self-heal
+        // timing dependency. The invite row is found by child_email, which the
+        // age gate stored at invite-send time (works same- and cross-device).
+        try {
+          const { fetchInviteByChildEmail } = await import("@/lib/brainloverInvites");
+          let parentCaregiverId = "";
+          if (session.user.email) {
+            const byChild = await fetchInviteByChildEmail(session.user.email);
+            parentCaregiverId = byChild?.caregiverId || "";
+          }
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parentCaregiverId);
+          if (isUuid) {
+            const { data: linkExists } = await (supabase.from("caregiver_links") as any)
+              .select("id").eq("caregiver_id", parentCaregiverId).eq("patient_id", session.user.id).maybeSingle();
+            if (!linkExists) {
+              const { error: linkErr } = await (supabase.from("caregiver_links") as any).insert({
+                caregiver_id: parentCaregiverId,
+                patient_id: session.user.id,
+                status: "active",
+              });
+              if (linkErr) console.warn("[FB-DEBUG] parent caregiver_link insert (non-fatal):", linkErr.message);
+              else console.warn("[FB-DEBUG] created parent caregiver_link:", { parentCaregiverId, patientId: session.user.id });
+            }
+          }
+        } catch (e) {
+          console.warn("[FB-DEBUG] parent caregiver_link finalize error (non-fatal):", e);
+        }
+
+      // Don't redirect yet — the caller (Onboarding.tsx) will move to step 15 (install app)
+      // The redirect happens when the user clicks "Continue" on the install step.
+      return true;
       } catch (err: any) {
         console.error("Onboarding save error:", err.message);
         toast({ title: t("onboarding.saveErrorTitle"), description: err.message, variant: "destructive" });
@@ -333,28 +409,31 @@ export function useOnboardingSubmit({
   );
 
   const handleCompleteBrainLover = useCallback(
-    async (overrideData?: any): Promise<boolean> => {
+    async (overrideData?: any, forcePending = false): Promise<boolean> => {
+      console.log("[FB-DEBUG] handleCompleteBrainLover called:", { overrideData: !!overrideData, forcePending });
       setIsProcessing(true);
       const errorLog: string[] = [];
 
-      const s = overrideData ? { ...state, ...overrideData } : state;
+       const s = overrideData ? { ...state, ...Object.fromEntries(Object.entries(overrideData).filter(([, v]) => v != null)) } : state;
 
-      console.log("[FB-DEBUG] handleCompleteBrainLover START:", {
-        hasSession: !!session?.user,
-        userId: session?.user?.id,
-        subAccountName: s.subAccountName,
-        subAccountPatientId: s.subAccountPatientId,
-        managementMode: s.managementMode,
-        isOverride: !!overrideData,
-      });
+       console.log("[FB-DEBUG] handleCompleteBrainLover START:", {
+         hasSession: !!session?.user,
+         userId: session?.user?.id,
+         subAccountName: s.subAccountName,
+         subAccountPatientId: s.subAccountPatientId,
+         managementMode: s.managementMode,
+         isOverride: !!overrideData,
+         statePatientId: state.patientId,
+         overrideDataPatientId: overrideData?.patientId ?? null,
+       });
 
       try {
-        // ── Save pending onboarding ONLY when there is no session yet. ──
-        // Same rule as handleComplete: a verified session means the email is
-        // already proven, so complete the writes now instead of detouring
-        // through the device-scoped pending→resume path.
-        if (!session?.user || (session.user.id === "dev-user-id" && !overrideData)) {
-          console.log("[FB-DEBUG] Saving pendingOnboarding (no session or auth-step call)");
+        // ── Save pending onboarding when there is no session yet,
+        //    OR when the email has not been confirmed yet,
+        //    OR when forcePending is set (called from StepMagicLinkAuth
+        //    before OTP confirmation).
+        if (forcePending || !session?.user || !session.user.email_confirmed_at || (session.user.id === "dev-user-id" && !overrideData)) {
+          console.log("[FB-DEBUG] Saving pendingOnboarding", { forcePending, hasSession: !!session?.user, emailConfirmed: !!session?.user?.email_confirmed_at });
           localStorage.setItem(
             "pendingOnboarding",
             JSON.stringify({
@@ -370,14 +449,19 @@ export function useOnboardingSubmit({
               subAccountName: s.subAccountName || null,
               subAccountConditions: s.subAccountConditions || null,
               subAccountLocation: s.subAccountLocation || null,
-              subAccountDiagnosisStory: s.subAccountDiagnosisStory || null,
-              subAccountPhoto: s.subAccountPhoto || null,
-              displayName: s.displayName || null,
-              photo: s.photo || null,
-              location: s.location || null,
-            })
+               subAccountDiagnosisStory: s.subAccountDiagnosisStory || null,
+               subAccountPhoto: s.subAccountPhoto || null,
+                displayName: s.displayName || null,
+                photo: s.photo || null,
+                location: s.location || null,
+                currentStep: s.currentStep ?? 1,
+              })
           );
-          return true; // saved successfully, will resume after auth
+          // Return FALSE so callers (the resume effect) keep pendingOnboarding.
+          // Returning true here once deleted the pending row with zero writes,
+          // bouncing verified users back to onboarding forever.
+          setIsProcessing(false);
+          return false;
         }
 
         if (!session?.user) throw new Error("No user found");
@@ -386,12 +470,12 @@ export function useOnboardingSubmit({
         // The StepMagicLinkAuth component will show a "Continue to Dashboard" button
         // for dev-bypass users so they can proceed without email verification.
         if (session.user.id === "dev-user-id") {
-          localStorage.setItem("dev_role_override", s.caregiverType === "professional" ? "pro" : "caregiver");
+          localStorage.setItem("dev_role_override", s.caregiverType === "professional" ? "pro" : "brainlover");
           return true;
         }
 
         // ── Role upsert ──
-        const assignedRole = s.caregiverType === "professional" ? "pro" : "caregiver";
+        const assignedRole = s.caregiverType === "professional" ? "pro" : "brainlover";
         const { data: roleExists, error: roleError1 } = await (supabase.from("user_roles") as any)
           .select("id").eq("user_id", session.user.id).maybeSingle();
         if (roleError1) errorLog.push(`Role Check Error: ${roleError1.message}`);
@@ -403,7 +487,10 @@ export function useOnboardingSubmit({
         } else {
           const { error: roleError3 } = await (supabase.from("user_roles") as any)
             .insert({ user_id: session.user.id, role: assignedRole });
-          if (roleError3) errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          if (roleError3) {
+            console.warn("[FB-DEBUG] user_roles insert still failing after RLS fix:", roleError3.message);
+            errorLog.push(`Role Insert Error: ${roleError3.message}`);
+          }
         }
 
         // ── Profile upsert (now includes displayName, photo, location from step 2) ──
@@ -425,6 +512,7 @@ export function useOnboardingSubmit({
           avatar_url: s.photo || null,
           location: s.location || null,
           total_score: 0,
+          age_verified: true, // User completed age gate during onboarding
         };
 
         if (profileExists) {
@@ -587,10 +675,23 @@ export function useOnboardingSubmit({
               management_mode: s.managementMode || "manage",
             });
             if (linkErr) {
-              console.error("[FB-DEBUG] caregiver_link insert error:", linkErr.message);
-              throw new Error(`Failed to link FreeBrainer: ${linkErr.message}`);
+              // Orphan patient id (stale pendingOnboarding replaying a deleted
+              // test user, or an invite pointing at a wiped account): the DB
+              // trigger rejects it. Skipping is correct — completing onboarding
+              // must never die for a link, and ensureInvitedCaregiverLink
+              // recreates the real link later from live invite context.
+              // Anything else still throws so real failures stay visible.
+              const msg = linkErr.message || "";
+              const isOrphan = /must reference auth\.users|violates foreign|foreign key|invalid input syntax/i.test(msg);
+              if (isOrphan) {
+                console.warn("[FB-DEBUG] Skipping caregiver_link for stale patient id (non-fatal):", targetPatientId, msg);
+              } else {
+                console.error("[FB-DEBUG] caregiver_link insert error:", msg);
+                throw new Error(`Failed to link FreeBrainer: ${msg}`);
+              }
+            } else {
+              console.log("[FB-DEBUG] Created caregiver_link for patient:", targetPatientId);
             }
-            console.log("[FB-DEBUG] Created caregiver_link for patient:", targetPatientId);
           } else {
             // Update management_mode if link already exists
             await (supabase.from("caregiver_links") as any)
@@ -688,6 +789,7 @@ export function useOnboardingSubmit({
           await flushDeferredBrainLoverInvites({
             caregiverId: session.user.id,
             patientId: targetPatientId && !isDevPatientId ? targetPatientId : null,
+            email: session.user.email || undefined,
           });
         } catch (e) {
           console.warn("[FB-DEBUG] Flush deferred BrainLover invites error (non-fatal):", e);
@@ -709,6 +811,38 @@ export function useOnboardingSubmit({
           // Clear any stale pendingOnboarding (from this device or another) so
           // the route guard can never bounce a completed user back to onboarding.
           localStorage.removeItem("pendingOnboarding");
+        }
+
+        // ── Parent-invite flow: stamp our caregiver_id on the invite row and
+        //    send the waiting child their "finish your onboarding" link. The
+        //    child stopped at the age gate (step 12); this email resumes them
+        //    at step 13. Non-fatal — the dashboard resend CTA covers failures.
+        try {
+          const parentEmail = session.user.email?.toLowerCase() || null;
+          if (parentEmail) {
+            const { fetchInviteContextByEmail, sendChildFinishInvite } = await import("@/lib/brainloverInvites");
+            const inviteCtx = await fetchInviteContextByEmail(parentEmail);
+            if (!inviteCtx) {
+              // No invite row (e.g. upsert failed pre-migration-50, or this
+              // email differs from the invited one). Nothing to stamp or send;
+              // the child's waiting-screen resend recreates the row.
+              console.warn("[FB-DEBUG] parent-invite finalize: no invite row for", parentEmail);
+            } else {
+              await (supabase.from("brainlover_invites") as any)
+                .update({ caregiver_id: session.user.id })
+                .eq("invitee_email", parentEmail);
+              if (inviteCtx.childEmail) {
+                const childRes = await sendChildFinishInvite(inviteCtx.childEmail);
+                if (!childRes.success) {
+                  console.warn("[FB-DEBUG] child finish-link send failed (non-fatal, use dashboard resend):", childRes.error);
+                }
+              } else {
+                console.warn("[FB-DEBUG] parent-invite finalize: row has no child_email (pre-migration-50 row?) — child gets no finish-link until they resend from their waiting screen.");
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[FB-DEBUG] parent-invite finalize error (non-fatal):", e);
         }
 
         // NOTE: pendingOnboarding is cleared below on success (and the caller

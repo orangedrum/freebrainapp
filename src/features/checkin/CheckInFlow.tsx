@@ -93,11 +93,19 @@ export const CheckInFlow: React.FC<CheckInFlowProps> = ({
 
   const [checkinStep, setCheckinStep] = useState(0);
 
+  // Was the mystery box ALREADY revealed when this open started? Only then
+  // may the sheet auto-close (stale open for an already-checked-in user).
+  // After a FRESH submit in this session the celebration must play out and
+  // close only via the Finish button — auto-closing on reveal used to skip
+  // the entire celebratory ending the instant it appeared.
+  const wasRevealedAtOpen = useRef(false);
+
   // When the sheet opens, jump to step 1 (movement choice).
   // When it closes, reset to step 0 so next open starts fresh.
   // Also flag the PWA update hook so it defers any pending reload.
   useEffect(() => {
     if (isOpen) {
+      wasRevealedAtOpen.current = ci.mysteryBoxState === "revealed";
       // If the user has ALREADY checked in today, force-close immediately
       // UNLESS this is a bonus session (Keep Moving card).
       // Only close when the mystery box is fully revealed — NOT during
@@ -107,7 +115,8 @@ export const CheckInFlow: React.FC<CheckInFlowProps> = ({
       // open briefly, then close once data loads revealing a real check-in.
       // But more critically: if isFetching is true, we don't know the real
       // status yet, so we should NOT auto-close. Let the data load first.
-      if (!allowBonusSession && !ci.isFetching && ci.hasCheckedInToday && ci.mysteryBoxState === "revealed") {
+      if (!allowBonusSession && !ci.isFetching && ci.hasCheckedInToday && ci.mysteryBoxState === "revealed" && wasRevealedAtOpen.current) {
+        console.log("[FB-DEBUG] CheckInFlow: auto-closing stale open (already revealed at open)");
         onOpenChange(false);
         return;
       }
@@ -336,6 +345,8 @@ export const CheckInFlow: React.FC<CheckInFlowProps> = ({
             onClose={() => onOpenChange(false)}
             userEmail={user?.email}
             perspective={perspective}
+            previousScore={ci.prevScore ?? null}
+            scoreUserId={(ci as any)._overrideUserId || user?.id}
           />
         )}
       </SheetContent>

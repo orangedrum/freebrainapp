@@ -188,7 +188,15 @@
     "favoriteMovementsDesc": "Ajoutez des mouvements que vous aimez — nous les prioriserons dans vos vidéos de check-in.",
     "deselectWarningTitle": "Arrêter de suivre ce paramètre ?",
     "deselectWarningDesc": "Les données précédemment enregistrées pour \"{{param}}\" resteront sur votre appareil mais ne seront plus suivies activement.",
-    "confirmDeselect": "Oui, arrêter le suivi"
+    "confirmDeselect": "Oui, arrêter le suivi",
+    "pinLockTitle": "Parent PIN Lock",
+    "pinLockDesc": "Protect parent settings with a PIN when the app returns from background",
+    "verifyPin": "Verify PIN to access settings",
+    "setPin": "Set PIN",
+    "pinEnterDesc": "Enter your PIN to access parent settings",
+    "pinSetSuccess": "PIN set successfully",
+    "pinTooShort": "PIN must be at least 4 digits",
+    "pinIncorrect": "Incorrect PIN. Try again."
   },
   "network": {
     "title": "Mon Réseau",
@@ -264,7 +272,13 @@
   },
   "caregiverDashboard": {
     "inviteAnotherFreeBrainer": "Inviter FreeBrainer",
-    "inviteBrainLover": "Inviter BrainLover"
+    "inviteBrainLover": "Inviter BrainLover",
+    "pendingChildFallback": "Votre FreeBrainer",
+    "pendingChildDesc": "Ils n'ont pas encore terminé la configuration de leur compte. Nous leur enverrons un lien pour terminer — ou renvoyez-le maintenant.",
+    "pendingChildResend": "Renvoyer leur lien",
+    "pendingChildResent": "Lien renvoyé !",
+    "pendingChildResendFailed": "Impossible de renvoyer le lien",
+    "pendingChildCooldown": "Nouvel envoi possible dans {{minutes}} min environ."
   },
   "chart": {
     "loading": "Chargement des données de corrélation de mouvement...",
@@ -486,6 +500,8 @@
       "brainloverDesc": "Proche aidant ou vous avez un proche qui a besoin de mouvement",
       "brainfreeer": "BrainFreeer",
       "brainfreeerDesc": "Neurologue ou thérapeute du mouvement",
+      "parent": "Parent d'un FreeBrainer",
+      "parentDesc": "Je suis parent ou tuteur légal d'une personne qui utilise FreeBrain",
       "lost": "Je suis perdu"
     },
     "step2": {
@@ -596,8 +612,27 @@
       "invitedBy": "Vous avez été invité à soutenir {{name}} de la part de {{inviter}}",
       "invitedGeneric": "Vous avez été invité à soutenir {{name}}",
       "invitedWelcomeTitle": "Venez aimer leur cerveau",
+      "parentInvitedWelcomeTitle": "Votre enfant vous a invité à FreeBrain",
       "isThisYourFreeBrainer": "Est-ce votre FreeBrainer ?",
+      "isThisYourChild": "Est-ce votre enfant ?",
       "thatsThem": "C'est eux",
+      "thatsMyChild": "Oui, c'est mon enfant !",
+      "managedDeviceNote": "Appareil familial ? Continuez simplement sur cette page dans votre navigateur — rien à installer.",
+      "allowlistTitle": "Le téléphone de votre enfant est-il restreint ?",
+      "allowlistDesc": "Si son téléphone n'autorise que des sites approuvés, autorisez ces trois domaines pour que son lien et ses vidéos fonctionnent. Sinon, continuez.",
+      "allowlistDomainsLabel": "Autorisez ces domaines :",
+      "allowlistIphoneTitle": "iPhone (Temps d'écran)",
+      "allowlistIphone1": "Réglages → Temps d'écran → Restrictions",
+      "allowlistIphone2": "Restrictions de contenu → Contenu web → Sites autorisés uniquement",
+      "allowlistIphone3": "Ajouter un site → saisissez chaque domaine",
+      "allowlistAndroidTitle": "Android (Family Link)",
+      "allowlistAndroid1": "Ouvrez Family Link → sélectionnez le compte de votre enfant",
+      "allowlistAndroid2": "Contrôles → Restrictions de contenu → Google Chrome",
+      "allowlistAndroid3": "Autoriser l'accès à ces sites → ajoutez chaque domaine",
+      "consentTitle": "Consentement parental",
+      "consentText": "Je consens à ce que mon enfant utilise FreeBrain. Je comprends que c'est un suivi des habitudes de mouvement pour le bien-être général et le soutien communautaire.",
+      "consentCheckbox": "J'ai lu et j'accepte les Conditions d'utilisation et la Politique de confidentialité",
+      "consentButton": "J'accepte",
       "step2": {
         "title": "Qui soutenez-vous ?",
         "personal": "Un proche personnellement",
@@ -684,8 +719,19 @@
       "title": "Bienvenue sur FreeBrain",
       "subtitle": "Entrez votre email pour sauvegarder votre profil et recevoir un lien magique. Aucun mot de passe nécessaire !",
       "emailLabel": "Votre adresse email",
-      "sentTitle": "Vérifiez votre boîte de réception !",
+      "sentTitle": "Une dernière étape !",
       "sentDesc": "Nous avons envoyé un lien magique à",
+      "lastStepTitle": "Dernière étape !",
+      "lastStepDesc": "Allez vérifier vos e-mails sur votre téléphone !",
+      "confirmationSent": "Nous avons envoyé un e-mail de confirmation à :",
+      "resend": "Renvoyer le lien",
+      "verifiedTitle": "E-mail vérifié ! Configuration de votre compte…",
+      "mismatchTitle": "Mauvais compte pour cette inscription",
+      "mismatchDesc": "Ce navigateur est connecté en tant que {{signedIn}}, mais cette inscription est pour {{expected}}. Déconnectez-vous d'abord, puis ouvrez votre propre lien.",
+      "mismatchSignOut": "Se déconnecter",
+      "confirmInstructions": "Cliquez sur le lien dans votre email pour confirmer votre compte et accéder à votre tableau de bord.",
+      "invitesDeferredTitle": "Les parties invitées seront notifiées après votre confirmation",
+      "invitesDeferredDesc": "Les FreeBrainers ou BrainLovers que vous avez invités pendant l'inscription recevront leur invitation une fois que vous aurez confirmé votre email et que votre compte sera actif.",
       "spamNotice": "Vous ne l'avez pas reçu ? Vérifiez vos spams ou réessayez avec un autre email.",
       "tryAnother": "Essayer un autre email",
       "sending": "Envoi du lien magique...",
@@ -854,7 +900,8 @@
       "logActivityDesc": "Qu'ont-ils fait ? Décrivez leur mouvement pour qu'il apparaisse dans le journal.",
       "logActivityPlaceholder": "ex. Marché dans le parc, étiré 10 min, dansé dans la cuisine...",
       "logActivityContinue": "Continuer"
-    }
+    },
+    "totalScore": "Score total"
   },
   "videoPlayer": {
     "play": "Lire",
@@ -1135,6 +1182,8 @@
     "channelEmailDesc": "Alertes envoyées à votre adresse e-mail",
     "granularSection": "Sur Quoi Vous Êtes Notifié",
     "privacyNote": "Vos préférences de notification sont stockées uniquement sur cet appareil et ne se synchronisent pas entre les appareils.",
+    "pushFailed": "Push non activé",
+    "pushFailedDesc": "Permission refusée ou navigateur incompatible. Les notifications dans l'app fonctionnent toujours.",
     "toggles": {
       "pokes": "Encouragements",
       "pokesDesc": "Quand votre BrainLover vous encourage à bouger",
@@ -1504,5 +1553,47 @@
     "supportConnectedDesc": "{{name}} peut désormais aider à soutenir {{patient}}.",
     "noPatient": "Aucun FreeBrainer sélectionné pour partager.",
     "error": "Échec de l'envoi"
+  },
+  "ageGate": {
+    "title": "Faisons connaissance !",
+    "subtitle": "Cela nous aide à nous assurer que FreeBrain est fait pour vous.",
+    "emailLabel": "Votre e-mail",
+    "birthdayLabel": "En quelle année êtes-vous né(e) ?",
+    "birthdayPlaceholder": "Sélectionnez l'année",
+    "nameLabel": "Comment devons-nous vous appeler ?",
+    "namePlaceholder": "Votre prénom ou surnom",
+    "caregiverUnder18": "Les BrainLovers doivent avoir 18 ans ou plus. Demandez à un parent ou tuteur de soutenir votre FreeBrainer.",
+    "waitingTitle": "Vous y êtes presque !",
+    "waitingDesc": "Dès que votre parent aura terminé son inscription, nous vous enverrons un lien pour terminer la vôtre.",
+    "waitingSentTo": "Nous avons envoyé l'invitation à :",
+    "waitingResent": "Lien renvoyé ! Demandez à votre parent de vérifier ses e-mails.",
+    "waitingResend": "Renvoyer le lien à mon parent",
+    "waitingChangeEmail": "Utiliser un autre e-mail de parent",
+    "waitingCooldown": "Nouvel envoi possible dans {{minutes}} min environ.",
+    "inviteSaveFailed": "Impossible d'enregistrer l'invitation. Vérifiez votre connexion et réessayez — ne continuez pas tant que cela échoue, sinon aucun parent ne sera lié.",
+    "continue": "Continuer",
+    "parentTitle": "Parent ou tuteur requis",
+    "parentSubtitle": "Si vous avez moins de 18 ans, un parent ou tuteur doit compléter la configuration en premier.",
+    "parentEmailLabel": "E-mail du parent/tuteur",
+    "parentSend": "Lien de vérification",
+    "parentSent": "Vérifiez votre e-mail!",
+    "parentNudge": "Demandez à un parent de vérifier pour continuer.",
+    "parentVerified": "Parent vérifié! Vous pouvez maintenant continuer.",
+    "under18": "Vous devez avoir au moins 18 ans pour créer un compte vous-même. Un parent ou tuteur peut aider.",
+    "step1": {
+      "title": "Quel âge avez-vous?",
+      "continue": "Continuer"
+    },
+    "step2": {
+      "title": "Parent ou tuteur requis",
+      "subtitle": "Si vous avez moins de 18 ans, nous avons besoin qu'un parent ou tuteur vérifie.",
+      "emailLabel": "E-mail du parent/tuteur",
+      "sendButton": "Envoyer le lien de vérification",
+      "sentDesc": "Vérifiez {{email}} pour le lien de vérification.",
+      "back": "Retour"
+    },
+    "parentConsent": "Je suis un parent ou tuteur et je consens à configurer ce compte.",
+    "parentConsentLabel": "Consentement du parent/tuteur",
+    "parentConsentDesc": "Veuillez confirmer que vous êtes le parent ou tuteur de la personne qui configure ce compte."
   }
 }

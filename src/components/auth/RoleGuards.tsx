@@ -26,10 +26,18 @@ export const getDefaultRouteForRole = (role: string | null): string => {
 export const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
   const { session, isLoading, onboardingCompleted, userRole, isAdmin } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return <BrainFactLoader isLoading={isLoading} />;
   }
+
+  // If the user is joining via a parent invite link, first-time parents stay on
+  // /onboarding regardless of anything else — the invite flow must run.
+  // BUT a parent who already completed (role + flag set, no pending) must go
+  // to their dashboard: otherwise every re-clicked invite link restarts
+  // onboarding from step 2, which is the "over and over" loop.
+  const isParentInvite = new URLSearchParams(location.search).get("kind") === "parent_invite";
 
   // If there's a pendingOnboarding in localStorage, the user hasn't truly
   // finished onboarding yet (sub-account creation may have failed). Let them
@@ -39,7 +47,10 @@ export const OnboardingRoute = ({ children }: { children: React.ReactNode }) => 
   // Admins can always access onboarding to test the flow.
   // Non-admins are redirected if they've already completed onboarding
   // AND there's no pending onboarding to resume.
-  if (session && onboardingCompleted && userRole && !isAdmin && !hasPending) {
+  // Exception: FRESH parent invite links stay on /onboarding so the invite
+  // flow can complete. Completed parents (no pending) go to their dashboard.
+  const isFreshParentInvite = isParentInvite && !onboardingCompleted;
+  if (session && onboardingCompleted && userRole && !isAdmin && !hasPending && !isFreshParentInvite) {
     return <Navigate to={getDefaultRouteForRole(userRole)} replace />;
   }
 

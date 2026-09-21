@@ -1,0 +1,37 @@
+{
+  "name": "FreeBrain — On-Demand Movement Therapy",
+  "short_name": "FreeBrain",
+  "description": "On-demand movement therapy for your brain. Join the community of FreeBrainers exploring neuroplasticity through movement.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#4338ca",
+  "categories": [
+    "health",
+    "wellness",
+    "medical"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

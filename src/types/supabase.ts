@@ -137,6 +137,7 @@ export interface Database {
           wearable_connected: boolean | null
           share_consent: boolean | null
           onboarding_completed: boolean | null
+          age_verified: boolean | null
           created_at: string
           updated_at: string
         }
@@ -154,6 +155,7 @@ export interface Database {
           wearable_connected?: boolean | null
           share_consent?: boolean | null
           onboarding_completed?: boolean | null
+          age_verified?: boolean | null
           created_at?: string
           updated_at?: string
         }
@@ -171,6 +173,7 @@ export interface Database {
           wearable_connected?: boolean | null
           share_consent?: boolean | null
           onboarding_completed?: boolean | null
+          age_verified?: boolean | null
           created_at?: string
           updated_at?: string
         }
@@ -338,19 +341,19 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          role: "user" | "admin" | "freebrainer" | "brainlover" | "pro"
+          role: "user" | "admin" | "freebrainer" | "brainlover" | "pro" | "parent"
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          role?: "user" | "admin" | "freebrainer" | "brainlover" | "pro"
+          role?: "user" | "admin" | "freebrainer" | "brainlover" | "pro" | "parent"
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
-          role?: "user" | "admin" | "freebrainer" | "brainlover" | "pro"
+          role?: "user" | "admin" | "freebrainer" | "brainlover" | "pro" | "parent"
           created_at?: string
         }
       }

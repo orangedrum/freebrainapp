@@ -138,21 +138,21 @@ export const FreeBrainerSteps: React.FC<FreeBrainerStepsProps> = ({
           </div>
         </div>
 
-        <div className="space-y-4">
-          <label className="text-lg md:text-xl font-semibold">
-            {t("onboarding.step8.nameLabel", "FreeBrainer Name")}
-          </label>
-          <Input
-            placeholder={t("onboarding.step8.namePlaceholder", "How should we call you?")}
-            className="h-14 md:h-16 text-lg md:text-xl border-2"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-          />
-        </div>
+<div className="space-y-4">
+           <label className="text-lg md:text-xl font-semibold">
+             {t("onboarding.step8.nameLabel", "FreeBrainer Name")}
+           </label>
+           <Input
+             placeholder={t("onboarding.step8.namePlaceholder", "How should we call you?")}
+             className="h-14 md:h-16 text-lg md:text-xl border-2"
+             value={displayName}
+             onChange={(e) => setDisplayName(e.target.value)}
+           />
+         </div>
 
-        <div className="space-y-4">
-          <label className="text-lg md:text-xl font-semibold">
-            {t("onboarding.step8.locationLabel")}
+         <div className="space-y-4">
+           <label className="text-lg md:text-xl font-semibold">
+             {t("onboarding.step8.locationLabel")}
           </label>
           <div className="relative">
             <Input
@@ -185,7 +185,11 @@ export const FreeBrainerSteps: React.FC<FreeBrainerStepsProps> = ({
           </div>
         </div>
 
-        <Button className="w-full h-16 md:h-20 text-xl md:text-2xl" onClick={() => setStep(7)}>
+        <Button
+          className="w-full h-16 md:h-20 text-xl md:text-2xl"
+          onClick={() => setStep(7)}
+          disabled={!displayName.trim()}
+        >
           {t("onboarding.continue")} <ChevronRight className="ml-2 h-6 w-6 md:h-8 md:w-8" />
         </Button>
       </div>
