@@ -12,15 +12,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Loader2 } from "lucide-react";
 import { supabase, safeSupabaseQuery } from "@/lib/supabase";
+import { addFreeBrainPoints } from "@/lib/scoreManager";
 import { useToast } from "@/hooks/use-toast";
 
 interface ActivityLogInputProps {
   patientId: string;
   patientName: string;
   brainloverId: string;
+  /**
+   * Fixed bonus points awarded to the patient for a quick log (no spinner,
+   * no full check-in flow). Default 0 = log only, no award. The KeepMoving
+   * card passes a small bonus so a child's extra effort is rewarded;
+   * proxy (BrainLover) logging omits it to keep existing behavior.
+   */
+  bonusPoints?: number;
 }
 
-export function ActivityLogInput({ patientId, patientName, brainloverId }: ActivityLogInputProps) {
+export function ActivityLogInput({ patientId, patientName, brainloverId, bonusPoints = 0 }: ActivityLogInputProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [content, setContent] = useState("");
@@ -56,9 +64,18 @@ export function ActivityLogInput({ patientId, patientName, brainloverId }: Activ
 
       setContent("");
       window.dispatchEvent(new CustomEvent("fb-activity-logged"));
+      // Quick logs can carry a small fixed bonus (KeepMoving card). Fire and
+      // forget — a score failure must never fail the log itself.
+      if (bonusPoints > 0 && patientId) {
+        addFreeBrainPoints(patientId, bonusPoints).catch((e) =>
+          console.warn("[FB-DEBUG] ActivityLogInput bonus points failed:", e)
+        );
+      }
       toast({
         title: t("activityLog.saved", "Activity logged! ✓"),
-        description: t("activityLog.savedDesc", "Added to {{name}}'s timeline.", { name: patientName.split(" ")[0] }),
+        description:
+          t("activityLog.savedDesc", "Added to {{name}}'s timeline.", { name: patientName.split(" ")[0] }) +
+          (bonusPoints > 0 ? ` +${bonusPoints} pts` : ""),
       });
     } catch {
       toast({ title: t("activityLog.error", "Failed to log"), variant: "destructive" });

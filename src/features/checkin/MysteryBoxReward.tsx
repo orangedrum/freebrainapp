@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { CheckCircle2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { InstallPromptCard } from "@/components/shared/InstallPromptCard";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { getFreeBrainScore } from "@/lib/scoreManager";
+import { ScoreCountUp } from "./ScoreCountUp";
 import type { CheckInPerspective } from "./CheckInFlow";
 
 interface MysteryBoxRewardProps {
@@ -14,6 +16,11 @@ interface MysteryBoxRewardProps {
   /** User email — needed for the install prompt (desktop "send to phone") */
   userEmail?: string;
   perspective?: CheckInPerspective;
+  /** Score BEFORE this check-in (captured pre-write). When null, derived as
+   *  live total − earned. */
+  previousScore?: number | null;
+  /** User whose total animates (patient in proxy mode, self otherwise) */
+  scoreUserId?: string;
 }
 
 export const MysteryBoxReward: React.FC<MysteryBoxRewardProps> = ({
@@ -23,10 +30,33 @@ export const MysteryBoxReward: React.FC<MysteryBoxRewardProps> = ({
   onClose,
   userEmail,
   perspective = "self",
+  previousScore = null,
+  scoreUserId,
 }) => {
   const { t } = useTranslation();
   const pwa = usePWAInstall();
   const pfx = perspective === "proxy" ? "proxy." : "";
+  const [resolvedStart, setResolvedStart] = useState<number | null>(previousScore);
+
+  // Fallback when no pre-write total was captured (e.g. revealed from a
+  // loaded row): the live total already includes today's points.
+  useEffect(() => {
+    if (mysteryBoxState !== "revealed" || pointsEarned <= 0 || previousScore !== null) return;
+    if (!scoreUserId) return;
+    let cancelled = false;
+    getFreeBrainScore(scoreUserId)
+      .then((total) => {
+        if (!cancelled) setResolvedStart(Math.max(0, total - pointsEarned));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [mysteryBoxState, pointsEarned, previousScore, scoreUserId]);
+
+  useEffect(() => {
+    setResolvedStart(previousScore);
+  }, [previousScore]);
 
   if (mysteryBoxState === "spinning") {
     return (
@@ -60,6 +90,12 @@ export const MysteryBoxReward: React.FC<MysteryBoxRewardProps> = ({
                 {t("checkin.mysteryBoxResult", { points: pointsEarned, defaultValue: `You earned ${pointsEarned} points!` })}
                 {hasMultiplier && t("checkin.multiplierBonus", " (2x Cheer Bonus Applied!)")}
               </p>
+              {resolvedStart !== null && (
+                <p className="text-lg font-semibold text-foreground">
+                  {t("checkin.totalScore", "Total score")}:{" "}
+                  <ScoreCountUp from={resolvedStart} to={resolvedStart + pointsEarned} />
+                </p>
+              )}
             </div>
           </>
         ) : (

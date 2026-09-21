@@ -36,6 +36,8 @@ import { BrainLoverTeamSection } from "@/features/brainlover/BrainLoverTeamSecti
 import { BrainLoverJointCheckInCard } from "@/features/brainlover/BrainLoverJointCheckInCard";
 import { BrainLoverCheckInModal } from "@/features/brainlover/BrainLoverCheckInModal";
 import { useBrainLoverData } from "@/features/brainlover/useBrainLoverData";
+import { usePendingChildren } from "@/features/brainlover/usePendingChildren";
+import { PendingChildCard } from "@/features/brainlover/PendingChildCard";
 import { useBrainLoverSOS } from "@/features/brainlover/useBrainLoverSOS";
 import { useBrainLoverEmptyState } from "@/features/brainlover/emptyStateFlag";
 import { Button } from "@/components/ui/button";
@@ -66,6 +68,9 @@ export default function BrainLoverDashboard() {
     caregiverType,
     loadDashboardData,
   } = useBrainLoverData(user?.id);
+
+  // Parent-invite flow: children waiting at the age gate (no link yet).
+  const { pendingChildren } = usePendingChildren(user?.email, user?.id);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInviteBLModal, setShowInviteBLModal] = useState(false);
@@ -157,6 +162,15 @@ export default function BrainLoverDashboard() {
 
       {patient ? (
         <>
+          {/* ── 2c. Waiting children (parent-invite flow, not finished yet) ── */}
+          {pendingChildren.map((c) => (
+            <PendingChildCard
+              key={c.childEmail}
+              childName={c.childName}
+              childAvatar={c.childAvatar}
+              childEmail={c.childEmail}
+            />
+          ))}
           {/* ── 3. SOS alert (only if active) ── */}
           {hasSOS && (
             <BrainLoverSOSAlert
@@ -226,7 +240,17 @@ export default function BrainLoverDashboard() {
         </>
       ) : (
         /* ── Empty state — no FreeBrainers connected ── */
-        <BrainLoverEmptyState onInvite={() => setShowInviteModal(true)} />
+        <>
+          {pendingChildren.map((c) => (
+            <PendingChildCard
+              key={`empty-${c.childEmail}`}
+              childName={c.childName}
+              childAvatar={c.childAvatar}
+              childEmail={c.childEmail}
+            />
+          ))}
+          <BrainLoverEmptyState onInvite={() => setShowInviteModal(true)} />
+        </>
       )}
 
       {/* ── Modals ── */}

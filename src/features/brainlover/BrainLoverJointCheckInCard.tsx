@@ -26,7 +26,8 @@ import { CheckInVideoStep } from "@/features/checkin/CheckInVideoStep";
 import { ActivityLogInput } from "@/features/checkin/ActivityLogInput";
 import { supabase } from "@/lib/supabase";
 import { isDevBypassUser } from "@/lib/devBypass";
-import { addFreeBrainPoints } from "@/lib/scoreManager";
+import { addFreeBrainPoints, getFreeBrainScore } from "@/lib/scoreManager";
+import { ScoreCountUp } from "@/features/checkin/ScoreCountUp";
 import { postToWall } from "@/lib/postToWall";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -56,6 +57,9 @@ export function BrainLoverJointCheckInCard({
   const [step, setStep] = useState<JointStep>("time");
   const [selectedMinutes, setSelectedMinutes] = useState<number>(15);
   const [activeVideo, setActiveVideo] = useState<YouTubeVideo | null>(null);
+  // Last award + live total for the celebratory before→after count-up.
+  const [lastEarned, setLastEarned] = useState(0);
+  const [doneTotal, setDoneTotal] = useState<number | null>(null);
 
   const isDevBypass = isDevBypassUser(patientId) || isDevBypassUser(caregiverId);
 
@@ -196,6 +200,7 @@ export function BrainLoverJointCheckInCard({
       }
 
       setHasCheckedIn(true);
+      setLastEarned(earned);
       setStep("done");
       onCheckedIn?.();
       // Notify the Updates page to refetch its timeline
@@ -243,6 +248,21 @@ export function BrainLoverJointCheckInCard({
 
   const firstName = patientName.split(" ")[0];
 
+  // Fetch the live total when the done card shows so the count-up animates
+  // from (total − earned) to total.
+  useEffect(() => {
+    if (step !== "done" || lastEarned <= 0) return;
+    let cancelled = false;
+    getFreeBrainScore(patientId)
+      .then((total) => {
+        if (!cancelled) setDoneTotal(total);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [step, lastEarned, patientId]);
+
   // ── Done state ──
   if (step === "done") {
     return (
@@ -265,6 +285,12 @@ export function BrainLoverJointCheckInCard({
               <p className="text-sm text-muted-foreground">
                 {t("loveTheirBrain.jointDoneDesc", "{{name}} earned points from your joint session. Great work!", { name: firstName })}
               </p>
+              {doneTotal !== null && lastEarned > 0 && (
+                <p className="text-base font-bold text-foreground">
+                  {t("checkin.totalScore", "Total score")}:{" "}
+                  <ScoreCountUp from={Math.max(0, doneTotal - lastEarned)} to={doneTotal} />
+                </p>
+              )}
             </div>
             <Button
               variant="outline"

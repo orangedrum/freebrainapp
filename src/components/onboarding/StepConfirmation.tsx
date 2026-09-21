@@ -20,7 +20,11 @@ export const StepConfirmation: React.FC<StepConfirmationProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  if (step === 13) {
+  // NOTE: the "Are you ready?" variant below is currently unreachable (the
+  // FreeBrainer flow renders this component at step 13, which takes the
+  // check-in branch). It is kept gated on step 12 rather than deleted so the
+  // copy survives for a future pre-movement hype screen.
+  if (step === 12) {
     return (
       <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4">
         <div className="flex items-start justify-between">

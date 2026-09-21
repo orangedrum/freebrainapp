@@ -216,7 +216,113 @@ The check-in is a multi-step modal:
 
 ---
 
-## 8. Supabase & RLS
+## 8. Onboarding State Machine
+
+The onboarding flow is driven by a state machine defined in `src/lib/onboardingStateMachine.ts`.
+Each role has explicit state transitions — no scattered `step === N` arithmetic.
+
+### State Definitions
+
+All possible onboarding states:
+
+```typescript
+type OnboardingState =
+  | "role_selection"           // Step 1: "I am a..." — user picks role
+  | "session_verified"        // User clicked magic link, session exists
+  | "condition"               // FreeBrainer: conditions
+  | "mobility"                // FreeBrainer: mobility
+  | "symptoms"                // FreeBrainer: symptoms
+  | "profile"                 // FreeBrainer/BrainLover: profile details
+  | "video_intro"             // FreeBrainer: video intro
+  | "confirmation"            // FreeBrainer: confirmation
+  | "magic_link"              // Auth: email verification
+  | "install_app"             // FreeBrainer: install app
+  | "brainlover_details"      // BrainLover: name, photo, location
+  | "management_mode"         // BrainLover: manage vs independent
+  | "connect_freebrainer"     // BrainLover: connect FreeBrainer
+  | "support_options"         // BrainLover: want support?
+  | "brainlover_confirmation" // BrainLover: confirmation
+  | "brainlover_magic_link"   // BrainLover: magic link auth
+  | "brainlover_install"      // BrainLover: install app
+  | "invited_context"         // Invited flow: show FreeBrainer's name/photo
+  | "how_youll_help"          // Invited flow: 3-column explanation
+  | "get_sample"              // Invited flow: "Get a Sample"
+  | "move_together"           // Invited flow: sample video
+  | "age_gate"                // Parent flow: 18+ check
+  | "consent"                 // Parent flow: "I consent to my child using FreeBrain"
+  | "onboarding_complete"     // Terminal: user finished onboarding
+  | "onboarding_failed"       // Terminal: handleComplete returned false
+  | "redirect_to_dashboard";  // Terminal: navigate to role dashboard
+```
+
+### State Transitions per Role
+
+| Role | Transitions |
+|------|-------------|
+| **FreeBrainer** | role_selection → condition → mobility → symptoms → profile → video_intro → confirmation → magic_link → install_app |
+| **BrainLover (personal)** | role_selection → brainlover_details → management_mode → connect_freebrainer → support_options → brainlover_confirmation → brainlover_magic_link → brainlover_install |
+| **BrainLover (professional)** | role_selection → brainlover_details → management_mode → connect_freebrainer → support_options → brainlover_confirmation → brainlover_magic_link → brainlover_install |
+| **Parent (invited)** | role_selection → invited_context → how_youll_help → profile → get_sample → move_together → age_gate → consent → magic_link |
+| **Invited BrainLover** | role_selection → invited_context → how_youll_help → profile → get_sample → move_together → magic_link |
+
+### Key Files
+
+- `src/lib/onboardingStateMachine.ts` — State definitions and transitions
+- `src/features/onboarding/useOnboardingStateMachine.ts` — Hook for state management
+- `src/pages/Onboarding.tsx` — Orchestrator (renders steps based on state)
+- `src/lib/inviteRouting.ts` — Invite intent computation (determines which flow)
+- `src/components/onboarding/StepBrainLoverFlow.tsx` — Routes step → component
+
+### Rules
+
+- **No `step === N` arithmetic** — use state machine transitions instead
+- **No scattered `if (role === "brainlover")` branches** — gate at page/orchestrator level
+- **Reuse components across roles** — customize via props (e.g., `caregiverType: "parent"`)
+- **Parent flow reuses invited brainlover components** — BLStepInvitedWelcome, BLStepHowYoullHelp, etc.
+- **Magic link IS email validation** — no separate email input for invited users
+- **Age gate comes AFTER seeing child's context** — parent sees child's name/photo first
+
+### Invite Routing
+
+The `computeInviteIntent()` function in `src/lib/inviteRouting.ts` reduces all invites to ONE of five intents:
+
+```typescript
+type InviteKind =
+  | "support_existing_fb"  // BrainLover supporting existing FreeBrainer
+  | "join_as_freebrainer"  // New FreeBrainer joining
+  | "join_as_brainlover"   // New BrainLover joining (self-signup)
+  | "team_only"            // Team-only join
+  | "parent_invite";       // Parent invited by their child
+```
+
+The intent determines:
+- Which onboarding flow to use
+- Whether to show role selection (invited users skip it)
+- Total steps for progress bar
+
+### Parent Flow Details
+
+When a child invites a parent:
+1. Parent receives magic link email
+2. Clicks link → arrives at `/onboarding` with invite context
+3. `computeInviteIntent()` sets `kind: "parent_invite"`, `caregiverType: "parent"`
+4. State machine uses `PARENT_TRANSITIONS` (reuses invited brainlover components)
+5. Steps 2-6: Same as invited brainlover (welcome, how you'll help, profile, sample, video)
+6. Step 7: Age gate (18+ check) — AFTER seeing child's context
+7. Step 8: Consent checkbox ("I consent to my child using FreeBrain")
+8. Step 9: Magic link auth (email verification)
+9. Complete: Role = "brainlover", caregiver_type = "parent"
+
+### Error Handling
+
+If an invite is expired or invalid:
+- Show message: "This invite link has expired or is invalid"
+- Offer: "Would you like to invite your FreeBrainer child to FreeBrain instead?"
+- If yes → redirect to brainlover self-signup flow (reuses existing BLStepConnectFreeBrainer)
+
+---
+
+## 9. Supabase & RLS
 
 - Client initialized in `src/lib/supabase.ts`.
 - Database types in `src/types/supabase.ts`.
@@ -230,7 +336,7 @@ The check-in is a multi-step modal:
 
 ---
 
-## 9. File Conventions
+## 10. File Conventions
 
 - **Components**: PascalCase `.tsx` (e.g., `StreakRatioCard.tsx`)
 - **Hooks**: camelCase `use*.ts` (e.g., `useOverviewData.ts`)
@@ -241,7 +347,7 @@ The check-in is a multi-step modal:
 
 ---
 
-## 10. Never-Do List
+## 11. Never-Do List
 
 - ❌ Hardcode colors (`text-white`, `bg-blue-500`, `#hex`)
 - ❌ Hardcode English text in JSX (bypass `useTranslation`)

@@ -79,6 +79,10 @@ export const BLStepInvitedWelcome: React.FC<BLStepInvitedWelcomeProps> = ({
         <p className="text-base md:text-lg text-muted-foreground text-center">{inviteText}</p>
       </div>
 
+      <p className="text-sm md:text-base text-muted-foreground text-center max-w-md mx-auto">
+        {t("onboarding.bl.managedDeviceNote", "Using a family-managed device? Just keep using this page in your browser — nothing to install.")}
+      </p>
+
       <Button className="w-full h-16 md:h-20 text-xl md:text-2xl font-bold" onClick={onNext}>
         {t("onboarding.bl.thatsThem", "That's Them")}
         <ChevronRight className="ml-2 h-6 w-6 md:h-8 md:w-8" />

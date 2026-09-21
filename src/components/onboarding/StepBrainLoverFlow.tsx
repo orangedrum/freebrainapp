@@ -19,12 +19,25 @@
  *   6: BLStepMoveTogether       — sample video (reused)
  *   7: StepMagicLinkAuth        — "1 more step!" email verification
  *
+ * ── Parent Invited (invited by their child, a FreeBrainer) ──
+ *   2: BLStepInvitedWelcome     — "Your Child Invited You" + FB profile
+ *   3: BLStepHowYoullHelp       — 3-column explanation
+ *   4: BLStepProfile            — Parent's name + photo + location
+ *   5: BLStepGetSample          — "Get a Sample"
+ *   6: BLStepMoveTogether       — sample video
+ *   7: StepAgeGate              — 18+ check
+ *   8: StepConsent              — "I consent to my child using FreeBrain"
+ *   9: BLStepAllowlistGuide     — allowlist domains on child's phone (skippable)
+ *   10: StepMagicLinkAuth       — email verification
+ *
  * All step UI lives in src/components/onboarding/bl/ as modular components.
  * This file just routes step → component and passes props.
  */
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { StepMagicLinkAuth } from "./StepMagicLinkAuth";
+import { StepAgeGate } from "./StepAgeGate";
+import { StepConsent } from "./StepConsent";
 import { BLStepWelcome } from "./bl/BLStepWelcome";
 import { BLStepProfile } from "./bl/BLStepProfile";
 import { BLStepManagementMode, type ManagementMode } from "./bl/BLStepManagementMode";
@@ -36,6 +49,7 @@ import { BLStepAboutFreeBrain } from "./bl/BLStepAboutFreeBrain";
 import { BLStepInvitedWelcome } from "./bl/BLStepInvitedWelcome";
 import { BLStepHowYoullHelp } from "./bl/BLStepHowYoullHelp";
 import { BLStepGetSample } from "./bl/BLStepGetSample";
+import { BLStepAllowlistGuide } from "./bl/BLStepAllowlistGuide";
 
 interface StepBrainLoverFlowProps {
   step: number;
@@ -65,7 +79,7 @@ interface StepBrainLoverFlowProps {
   // Sub-account patient ID (for passing through to Want Support invites)
   subAccountPatientId?: string | null;
   // Completion
-  handleCompleteBrainLover: () => void;
+  handleCompleteBrainLover: (overrideData?: any, forcePending?: boolean) => Promise<boolean>;
   isProcessing: boolean;
   speak: (text: string) => void;
   // Invited flow: when true, skip management mode + connect FreeBrainer + move together
@@ -73,6 +87,8 @@ interface StepBrainLoverFlowProps {
   freeBrainerAvatar?: string | null;
   // Invited flow: name of the BrainLover who sent the invite
   inviterName?: string | null;
+  // Parent flow: caregiver type for parent-specific steps
+  caregiverType?: "personal" | "professional" | "parent" | null;
 }
 
 export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
@@ -104,16 +120,17 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
   isInvited,
   freeBrainerAvatar,
   inviterName,
+  caregiverType,
 }) => {
   const { t } = useTranslation();
   void t;
 
   // ════════════════════════════════════════════════════════════
-  // INVITED BRAINLOVER FLOW
-  // 2 → 3 → 4 → 5 → 6 → 7(Auth)
+  // PARENT INVITED FLOW
+  // 2 → 3 → 4 → 5 → 6 → 7(AgeGate) → 8(Consent) → 9(Allowlist) → 10(Auth)
   // ════════════════════════════════════════════════════════════
-  if (isInvited) {
-    // Step 2: Invited Welcome — "Come Love Their Brain"
+  if (isInvited && caregiverType === "parent") {
+    // Step 2: Invited Welcome — "Your Child Invited You"
     if (step === 2) {
       return (
         <BLStepInvitedWelcome
@@ -182,10 +199,46 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
       );
     }
 
-    // Step 7: Auth — "1 more step! Help us verify your email"
+    // Step 7: Age Gate — 18+ check
+    if (step === 7) {
+      return (
+        <StepAgeGate
+          purpose="caregiver"
+          onComplete={() => setStep(8)}
+          onBack={() => setStep(6)}
+          childName={freeBrainerName}
+          childPhoto={freeBrainerAvatar}
+        />
+      );
+    }
+
+    // Step 8: Consent — "I consent to my child using FreeBrain"
+    if (step === 8) {
+      return (
+        <StepConsent
+          onComplete={() => setStep(9)}
+          onBack={() => setStep(7)}
+          speak={speak}
+        />
+      );
+    }
+
+    // Step 9: Allowlist guide — permit FreeBrain domains on the child's
+    // restricted phone (skippable; most families don't need it)
+    if (step === 9) {
+      return (
+        <BLStepAllowlistGuide
+          onNext={() => setStep(10)}
+          onBack={() => setStep(8)}
+          speak={speak}
+        />
+      );
+    }
+
+    // Step 10: Auth — "1 more step! Help us verify your email"
     return (
       <StepMagicLinkAuth
-        onComplete={handleCompleteBrainLover}
+        onComplete={() => handleCompleteBrainLover(undefined, true)}
         isProcessing={isProcessing}
         speak={speak}
         customTitle={t("onboarding.bl.invitedAuthTitle", "1 more step!")}
@@ -196,8 +249,107 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
   }
 
   // ════════════════════════════════════════════════════════════
+  // INVITED BRAINLOVER FLOW
+  // 2 → 3 → 4 → 5(AgeGate) → 6 → 7 → 8(Auth)
+  // ════════════════════════════════════════════════════════════
+  if (isInvited) {
+    // Step 2: Invited Welcome — "Come Love Their Brain"
+    if (step === 2) {
+      return (
+        <BLStepInvitedWelcome
+          freeBrainerName={freeBrainerName}
+          freeBrainerAvatar={freeBrainerAvatar}
+          inviterName={inviterName}
+          onNext={() => setStep(3)}
+          speak={speak}
+        />
+      );
+    }
+
+    // Step 3: How You'll Help — 3 columns → "I'm In"
+    if (step === 3) {
+      return (
+        <BLStepHowYoullHelp
+          onNext={() => setStep(4)}
+          onBack={() => setStep(2)}
+          speak={speak}
+        />
+      );
+    }
+
+    // Step 4: Profile — "Let's Learn About You"
+    if (step === 4) {
+      return (
+        <BLStepProfile
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          photo={photo}
+          fileInputRef={fileInputRef}
+          onPhotoUpload={onPhotoUpload}
+          location={location}
+          setLocation={setLocation}
+          searchLocation={searchLocation}
+          locationResults={locationResults}
+          onSelectLocation={onSelectLocation}
+          onNext={() => setStep(5)}
+          onBack={() => setStep(3)}
+          speak={speak}
+        />
+      );
+    }
+
+    // Step 5: Age Gate — 18+ check (after profile)
+    if (step === 5) {
+      return (
+        <StepAgeGate
+          purpose="caregiver"
+          onComplete={() => setStep(6)}
+          onBack={() => setStep(4)}
+          childName={freeBrainerName}
+          childPhoto={freeBrainerAvatar}
+        />
+      );
+    }
+
+    // Step 6: Get Sample — "Grab your FreeBrainer..."
+    if (step === 6) {
+      return (
+        <BLStepGetSample
+          freeBrainerName={freeBrainerName}
+          onNext={() => setStep(7)}
+          onBack={() => setStep(5)}
+          speak={speak}
+        />
+      );
+    }
+
+    // Step 7: Sample Video (reused from primary flow)
+    if (step === 7) {
+      return (
+        <BLStepMoveTogether
+          freeBrainerName={freeBrainerName}
+          onNext={() => setStep(8)}
+          onBack={() => setStep(6)}
+          speak={speak}
+        />
+      );
+    }
+
+    // Step 8: Auth — "1 more step! Help us verify your email"
+    return (
+      <StepMagicLinkAuth
+        onComplete={() => handleCompleteBrainLover(undefined, true)}
+        isProcessing={isProcessing}
+        speak={speak}
+        customTitle={t("onboarding.bl.invitedAuthTitle", "1 more step!")}
+        customSubtitle={t("onboarding.bl.invitedAuthSubtitle", "Help us verify your email by adding it below")}
+        customButtonLabel={t("onboarding.bl.invitedAuthButton", "Send")}
+      />
+    );
+  }
+
   // PRIMARY BRAINLOVER FLOW
-  // 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9(Auth)
+  // 2 → 3 → 4(AgeGate) → 5 → 6 → 7 → 8 → 9 → 10(Auth)
   // ════════════════════════════════════════════════════════════
 
   // Step 2: Welcome
@@ -226,21 +378,34 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
     );
   }
 
-  // Step 4: Management Mode (not skippable)
+  // Step 4: Age Gate — 18+ check (after profile)
   if (step === 4) {
+    return (
+      <StepAgeGate
+        purpose="caregiver"
+        onComplete={() => setStep(5)}
+        onBack={() => setStep(3)}
+        childName={freeBrainerName}
+        childPhoto={freeBrainerAvatar}
+      />
+    );
+  }
+
+  // Step 5: Management Mode (not skippable)
+  if (step === 5) {
     return (
       <BLStepManagementMode
         managementMode={managementMode}
         setManagementMode={setManagementMode}
-        onNext={() => setStep(5)}
-        onBack={() => setStep(3)}
+        onNext={() => setStep(6)}
+        onBack={() => setStep(4)}
         speak={speak}
       />
     );
   }
 
-  // Step 5: Connect FreeBrainer
-  if (step === 5) {
+  // Step 6: Connect FreeBrainer
+  if (step === 6) {
     return (
       <BLStepConnectFreeBrainer
         managementMode={managementMode || "manage"}
@@ -249,58 +414,58 @@ export const StepBrainLoverFlow: React.FC<StepBrainLoverFlowProps> = ({
         setPatientEmail={setPatientEmail}
         onSubAccountCreated={onSubAccountCreated}
         onFoundFreeBrainer={onFoundFreeBrainer}
-        onNext={() => setStep(managementMode === "manage" ? 6 : 8)}
-        onBack={() => setStep(4)}
-        speak={speak}
-      />
-    );
-  }
-
-  // Step 6: Move Together Intro (manage mode only)
-  if (step === 6) {
-    return (
-      <BLStepMoveTogetherIntro
-        freeBrainerName={freeBrainerName}
-        onNext={() => setStep(7)}
-        onSkip={() => setStep(8)}
+        onNext={() => setStep(managementMode === "manage" ? 7 : 9)}
         onBack={() => setStep(5)}
         speak={speak}
       />
     );
   }
 
-  // Step 7: Move Together Video (manage mode only)
+  // Step 7: Move Together Intro (manage mode only)
   if (step === 7) {
     return (
-      <BLStepMoveTogether
+      <BLStepMoveTogetherIntro
         freeBrainerName={freeBrainerName}
         onNext={() => setStep(8)}
+        onSkip={() => setStep(9)}
         onBack={() => setStep(6)}
         speak={speak}
       />
     );
   }
 
-  // Step 8: Want Support? (invite other BrainLovers)
+  // Step 8: Move Together Video (manage mode only)
   if (step === 8) {
+    return (
+      <BLStepMoveTogether
+        freeBrainerName={freeBrainerName}
+        onNext={() => setStep(9)}
+        onBack={() => setStep(7)}
+        speak={speak}
+      />
+    );
+  }
+
+  // Step 9: Want Support? (invite other BrainLovers)
+  if (step === 9) {
     return (
       <BLStepWantSupport
         freeBrainerName={freeBrainerName}
         caregiverId={caregiverId}
         patientId={subAccountPatientId || foundPatientId || null}
         patientAvatar={freeBrainerAvatar}
-        onNext={() => setStep(9)}
-        onBack={() => setStep(managementMode === "manage" ? 7 : 5)}
+        onNext={() => setStep(10)}
+        onBack={() => setStep(managementMode === "manage" ? 8 : 6)}
         speak={speak}
       />
     );
   }
 
-  // Step 9: Magic link auth + install
+  // Step 10: Magic link auth + install
   return (
-    <StepMagicLinkAuth
-      onComplete={handleCompleteBrainLover}
-      isProcessing={isProcessing}
+      <StepMagicLinkAuth
+        onComplete={() => handleCompleteBrainLover(undefined, true)}
+        isProcessing={isProcessing}
       speak={speak}
     />
   );

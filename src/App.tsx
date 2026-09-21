@@ -17,8 +17,24 @@ import BrainLoverProDashboard from "./pages/BrainLoverProDashboard";
 import AdminControls from "./pages/AdminControls";
 import JoinTeam from "./pages/JoinTeam";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
+import { usePWAUpdate } from "@/hooks/usePWAUpdate";
+import { initBadgeClearOnVisible } from "@/lib/pushSubscriptions";
 
 const queryClient = new QueryClient();
+
+/**
+ * Mounts the silent-update listeners (controllerchange → reload-or-defer,
+ * foreground + interval update checks) and clears the app-icon badge while
+ * the app is open. Renderless — see usePWAUpdate + pushSubscriptions.
+ */
+function PWAUpdateManager() {
+  usePWAUpdate();
+  useEffect(() => {
+    initBadgeClearOnVisible();
+  }, []);
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -26,6 +42,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <PWAUpdateManager />
         <Routes>
           {/* Bare routes — no DashboardLayout chrome */}
           <Route path="/auth" element={<Auth />} />
@@ -40,14 +57,12 @@ const App = () => (
 
           {/* Dashboards — ProtectedRoute renders DashboardLayout (sidebar + bottom nav) */}
           <Route path="/" element={<ProtectedRoute index />} />
-          <Route
-            path="/join"
-            element={
-              <ProtectedRoute>
-                <JoinTeam />
-              </ProtectedRoute>
-            }
-          />
+          {/* Invite landing — intentionally PUBLIC (no ProtectedRoute).
+              Invitees click magic links with no session yet; the guard used to
+              bounce them to bare /onboarding, destroying the invite context
+              before JoinTeam could recover it. JoinTeam handles both cases
+              internally (!user → forwards the full intent to /onboarding). */}
+          <Route path="/join" element={<JoinTeam />} />
           <Route
             path="/overview"
             element={

@@ -26,6 +26,14 @@ export interface InviteContext {
   inviterName: string | null;
   role: string;
   createdAt: number;
+  /** Parent-invite flow: the waiting child's email (captured at the age gate) */
+  childEmail?: string | null;
+  /** Parent-invite flow: the waiting child's display name (prefill on resume) */
+  childName?: string | null;
+  /** Parent-invite flow: the waiting child's photo URL (prefill on resume) */
+  childAvatar?: string | null;
+  /** Parent-invite flow: birth year from the age-gate dropdown */
+  childBirthYear?: string | null;
 }
 
 export interface SendInviteResult {
@@ -57,6 +65,13 @@ export interface InviteSendOptions {
   /** When set, appends team_id to the magic-link redirect so the invitee
    *  also joins this team after onboarding. */
   teamId?: string;
+  /** Override the auto-detected invite kind (default: "support_existing_fb" when
+   *  patientId is set, otherwise "join_as_brainlover"). Use "parent_invite" for
+   *  parent invite flows. */
+  kind?: InviteKind;
+  /** Override the OTP redirect path (default: "/join"). Use "/onboarding" for
+   *  parent invite flows so the invitee lands on the parent onboarding route. */
+  redirectPath?: string;
 }
 
 export interface JoinLinkParams {
@@ -159,6 +174,7 @@ export function queueDeferredBrainLoverInvite(
 export async function flushDeferredBrainLoverInvites(overrides?: {
   caregiverId?: string;
   patientId?: string | null;
+  email?: string;
 }): Promise<void> {
   let list: DeferredBrainLoverInvite[] = [];
   try {
@@ -171,6 +187,7 @@ export async function flushDeferredBrainLoverInvites(overrides?: {
     return;
   }
   for (const item of list) {
+    if (overrides?.email && item.email !== overrides.email) continue;
     const context = { ...item.context };
     if (overrides?.caregiverId) context.caregiverId = overrides.caregiverId;
     if (overrides && "patientId" in overrides) context.patientId = overrides.patientId;
@@ -317,14 +334,14 @@ export async function sendBrainLoverInvite(
   //    but user_metadata survives and is available in session.user.user_metadata
   //    after the invitee clicks the link and gets a session.
   const redirectUrl = buildJoinLink({
-    baseUrl: getOtpRedirectUrl("/join"),
+    baseUrl: getOtpRedirectUrl(opts?.redirectPath ?? "/join"),
     teamId: opts?.teamId,
     patientId: context.patientId,
     caregiverId: context.caregiverId,
     role: context.role,
     fbName: context.patientName,
     inviterName: context.inviterName,
-    kind: context.patientId ? "support_existing_fb" : "join_as_brainlover",
+    kind: opts?.kind ?? (context.patientId ? "support_existing_fb" : "join_as_brainlover"),
   });
 
   console.log("[FB-DEBUG] sendBrainLoverInvite:", {
@@ -466,12 +483,109 @@ export async function fetchInviteContextByEmail(
         inviterName: row.inviter_name || null,
         role: row.role || "caregiver",
         createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+        childEmail: row.child_email || null,
+        childName: row.child_name || null,
+        childAvatar: row.child_avatar || null,
+        childBirthYear: row.child_birth_year || null,
       };
     }
   } catch (e) {
     console.warn("[FB-DEBUG] fetchInviteContextByEmail error:", e);
   }
   return null;
+}
+
+/**
+ * Fetch a parent-invite row by the WAITING CHILD's email.
+ * Used when the child finishes onboarding (to find the parent's caregiver_id
+ * for the caregiver_links insert) and when the child resumes (to prefill
+ * name/photo). Returns the parent invitee email + child snapshot.
+ */
+export async function fetchInviteByChildEmail(
+  childEmail: string
+): Promise<{ parentEmail: string; caregiverId: string; patientId: string | null; childName: string | null; childAvatar: string | null; childBirthYear: string | null } | null> {
+  const cleanEmail = childEmail.toLowerCase().trim();
+  if (!cleanEmail) return null;
+  try {
+    const { data } = await safeSupabaseQuery<any[] | any>(() =>
+      (supabase.from("brainlover_invites") as any)
+        .select("*")
+        .eq("child_email", cleanEmail)
+        .order("created_at", { ascending: false })
+        .limit(1)
+    );
+    const row = Array.isArray(data) && data.length > 0 ? data[0] : data;
+    if (!row) return null;
+    return {
+      parentEmail: row.invitee_email,
+      caregiverId: row.caregiver_id || "",
+      patientId: row.patient_id || null,
+      childName: row.child_name || row.patient_name || null,
+      childAvatar: row.child_avatar || row.patient_avatar || null,
+      childBirthYear: row.child_birth_year || null,
+    };
+  } catch (e) {
+    console.warn("[FB-DEBUG] fetchInviteByChildEmail error:", e);
+    return null;
+  }
+}
+
+/**
+ * Send the "finish your onboarding" link to a waiting child.
+ * Called once when the parent completes onboarding, and on demand from the
+ * parent dashboard's resend CTA. The child's click lands on /onboarding with
+ * fb_child_finish in user_metadata, which resumes them at step 13 — their
+ * name/photo are recovered from the invite row by child_email.
+ */
+export async function sendChildFinishInvite(childEmail: string): Promise<SendInviteResult> {
+  const cleanEmail = childEmail.toLowerCase().trim();
+  if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
+    return { success: false, error: "Invalid email address." };
+  }
+  const { error } = await supabase.auth.signInWithOtp({
+    email: cleanEmail,
+    options: {
+      emailRedirectTo: getOtpRedirectUrl("/onboarding"),
+      shouldCreateUser: true,
+      data: { fb_child_finish: "1" },
+    },
+  });
+  if (error) {
+    console.warn("[FB-DEBUG] sendChildFinishInvite OTP error:", error.message);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+/**
+ * Fetch the latest NAMED invite row for a patient ID.
+ * Last-resort name/avatar source for invitees: the link may carry no fb_name
+ * (sender didn't have one), the invitee-keyed row may be nameless, and the
+ * patient's profiles row is RLS-invisible to unlinked invitees — but ANY
+ * earlier invite that named this patient carries what we need. The table is
+ * permissively readable, and the invitee already knows the patient_id from
+ * their own link, so this reveals nothing new.
+ */
+export async function fetchInviteByPatientId(
+  patientId: string
+): Promise<{ patientName: string | null; patientAvatar: string | null } | null> {
+  if (!patientId || patientId.startsWith("dev-patient-")) return null;
+  try {
+    const { data } = await safeSupabaseQuery<any[] | any>(() =>
+      (supabase.from("brainlover_invites") as any)
+        .select("patient_name, patient_avatar, created_at")
+        .eq("patient_id", patientId)
+        .not("patient_name", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+    );
+    const row = Array.isArray(data) && data.length > 0 ? data[0] : data;
+    if (!row?.patient_name) return null;
+    return { patientName: row.patient_name, patientAvatar: row.patient_avatar || null };
+  } catch (e) {
+    console.warn("[FB-DEBUG] fetchInviteByPatientId error:", e);
+    return null;
+  }
 }
 
 /**
