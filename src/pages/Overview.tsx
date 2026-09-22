@@ -27,6 +27,8 @@ import { TabbedLeaderboardSection } from "@/features/freebrainer/TabbedLeaderboa
 import { useOverviewData } from "@/features/freebrainer/useOverviewData";
 import { CheckInModal } from "@/features/checkin/CheckInModal";
 import { KeepMovingCard } from "@/features/checkin/KeepMovingCard";
+import { SessionInviteBanner } from "@/components/shared/SessionInviteBanner";
+import { useSessionNotifications } from "@/features/sessions/useSessionNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Overview() {
@@ -34,6 +36,7 @@ export default function Overview() {
   const { user } = useAuth();
   const pwa = usePWAInstall();
   const { hasCheckedInToday, userTeamId, loading: overviewLoading, refetch: refetchOverview } = useOverviewData();
+  const { invites: sessionInvites, markRead: markSessionInviteRead } = useSessionNotifications(user?.id, "freebrainer");
   const [showCalendlyModal, setShowCalendlyModal] = useState(false);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   // Track if the user completed a check-in OR manually dismissed the modal
@@ -89,6 +92,7 @@ export default function Overview() {
       )}
 
       {/* ── Row 2: Virtual Sessions (left) | StreakRatioCard (right) — 50/50 ── */}
+      <SessionInviteBanner invites={sessionInvites} onDismiss={markSessionInviteRead} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <VirtualSessionCalendar
           freebrainerEmail={user?.email}

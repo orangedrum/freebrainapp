@@ -140,6 +140,8 @@ export function CalendlyModal({
         title: t("calendly.notifiedTitle", "Team Notified! 📣"),
         description: t("calendly.notifiedDesc", "Your team will see the session invite in the app."),
       });
+      // Wake up any open dashboard so the new invites render immediately.
+      window.dispatchEvent(new Event("fb-session-notify"));
     } catch (e) {
       // Non-fatal — the Calendly booking still succeeded
       console.warn("[FB-DEBUG] notifyTeam error:", e);

@@ -1595,5 +1595,9 @@
     "parentConsent": "Je suis un parent ou tuteur et je consens à configurer ce compte.",
     "parentConsentLabel": "Consentement du parent/tuteur",
     "parentConsentDesc": "Veuillez confirmer que vous êtes le parent ou tuteur de la personne qui configure ce compte."
+  },
+  "sessionInvite": {
+    "title": "Invitation à une séance",
+    "dismiss": "Compris"
   }
 }

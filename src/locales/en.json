@@ -1593,5 +1593,9 @@
     "parentConsent": "I am a parent or guardian and I consent to set up this account.",
     "parentConsentLabel": "Parent/Guardian Consent",
     "parentConsentDesc": "Please confirm you are the parent or guardian of the person setting up this account."
+  },
+  "sessionInvite": {
+    "title": "Session invite",
+    "dismiss": "Got it"
   }
 }

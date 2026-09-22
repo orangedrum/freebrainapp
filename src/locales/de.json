@@ -1595,5 +1595,9 @@
     "parentConsent": "Ich bin ein Elternteil oder Erziehungsberechtigter und stimme zu, dieses Konto einzurichten.",
     "parentConsentLabel": "Elternteil/Erziehungsberechtigter Zustimmung",
     "parentConsentDesc": "Bitte bestätige, dass du der Elternteil oder Erziehungsberechtigte der Person bist, die dieses Konto einrichtet."
+  },
+  "sessionInvite": {
+    "title": "Sitzungseinladung",
+    "dismiss": "Verstanden"
   }
 }

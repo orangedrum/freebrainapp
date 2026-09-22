@@ -46,11 +46,16 @@
 
 ## Notifications program (steps 0–4)
 
-- [ ] **Step 0 (open): wire dead UI.** `session_notifications` table is
-      written, never read — needs its first reader. Granular toggles persist
-      but gate nothing (only the push channel toggle is live — it subscribes/
-      unsubscribes real Web Push). Full prefs→Supabase migration lands with
-      server-side sending.
+- [x] **Step 0 (part 1, shipped 2026-09-21): session reader.** First reader
+      of `session_notifications`: `useSessionNotifications` hook +
+      `SessionInviteBanner` on both dashboards, refresh on foreground +
+      `fb-session-notify` event, dismiss marks read. Honors the
+      `sessionReminders` granular toggle — the first preference that gates
+      something real.
+- [ ] **Step 0 (part 2, open): remaining toggles.** Wire `checkinReminders`
+      (KeepMoving/auto-open modal), `teamRallies` (rally banner),
+      `sosAlerts`, cheers/pokes banners, and streak/rank surfaces through
+      `isNotificationEnabled`, same pattern as the session banner.
 - [x] **Step 1 (shipped): installability.** `vite-plugin-pwa`
       (injectManifest, `src/sw.ts`), PNG icons, `usePWAUpdate` mounted in
       `App`. If update behavior ever surprises: `src/hooks/usePWAUpdate.ts`
@@ -87,3 +92,16 @@
   Keep protection OFF on the branch under test, or test install/push on
   the production domain. Decided 2026-09-21 after a full false-alarm
   installability investigation (code was correct; the wall was not).
+- Verified 2026-09-21: prod PWA installs cleanly from full Chrome (step 1
+  closed). Beware stale preview URLs (immutable per deploy) — always verify
+  against the newest deployment.
+
+## In-app (mini) browsers — open item
+
+- Magic-link openers land in Gmail/WebView mini-browsers: no install possible
+  there, push limited, and no nontechnical user (tremor, brain injury, or
+  otherwise) should ever have to know what "open in full Chrome" means.
+  Planned: UA-based detection (`wv` token, missing beforeinstallprompt) →
+  warm plain-language banner with a one-tap "Open in Chrome" deep-link, while
+  keeping FULL functionality inside the mini-browser (no dead ends, no
+  install nags). No user education as a strategy, ever.

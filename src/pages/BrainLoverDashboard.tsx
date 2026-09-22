@@ -38,6 +38,8 @@ import { BrainLoverCheckInModal } from "@/features/brainlover/BrainLoverCheckInM
 import { useBrainLoverData } from "@/features/brainlover/useBrainLoverData";
 import { usePendingChildren } from "@/features/brainlover/usePendingChildren";
 import { PendingChildCard } from "@/features/brainlover/PendingChildCard";
+import { SessionInviteBanner } from "@/components/shared/SessionInviteBanner";
+import { useSessionNotifications } from "@/features/sessions/useSessionNotifications";
 import { useBrainLoverSOS } from "@/features/brainlover/useBrainLoverSOS";
 import { useBrainLoverEmptyState } from "@/features/brainlover/emptyStateFlag";
 import { Button } from "@/components/ui/button";
@@ -71,6 +73,8 @@ export default function BrainLoverDashboard() {
 
   // Parent-invite flow: children waiting at the age gate (no link yet).
   const { pendingChildren } = usePendingChildren(user?.email, user?.id);
+  // Session invites others scheduled for you (first reader of the table).
+  const { invites: sessionInvites, markRead: markSessionInviteRead } = useSessionNotifications(user?.id, "brainlover");
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInviteBLModal, setShowInviteBLModal] = useState(false);
@@ -229,6 +233,7 @@ export default function BrainLoverDashboard() {
           <BrainLoverTeamSection patientId={patient.user_id} />
 
           {/* ── 8. Virtual session calendar ── */}
+          <SessionInviteBanner invites={sessionInvites} onDismiss={markSessionInviteRead} />
           <VirtualSessionCalendar
             freebrainerEmail={patient.email}
             freebrainerName={patient.display_name}
@@ -241,6 +246,7 @@ export default function BrainLoverDashboard() {
       ) : (
         /* ── Empty state — no FreeBrainers connected ── */
         <>
+          <SessionInviteBanner invites={sessionInvites} onDismiss={markSessionInviteRead} />
           {pendingChildren.map((c) => (
             <PendingChildCard
               key={`empty-${c.childEmail}`}

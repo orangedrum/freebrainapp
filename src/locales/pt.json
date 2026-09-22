@@ -1595,5 +1595,9 @@
     "parentConsent": "Sou pai ou responsável e consinto em configurar esta conta.",
     "parentConsentLabel": "Consentimento de pai/responsável",
     "parentConsentDesc": "Por favor, confirme que você é o pai ou responsável da pessoa que está configurando esta conta."
+  },
+  "sessionInvite": {
+    "title": "Convite para sessão",
+    "dismiss": "Entendi"
   }
 }
