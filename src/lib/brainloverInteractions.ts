@@ -201,6 +201,8 @@ export async function fetchBrainLoverInteractions(patientId: string): Promise<Br
 
   // 3. Query Supabase community_posts for recent brainlover posts within last 48 hours
   //    Skip in dev-bypass mode — dev-user-id is not a valid UUID.
+  //    Acknowledged (dismissed) rows are excluded server-side; the local
+  //    dismissedIds set below covers same-session races.
   if (!isDevBypassUser(patientId)) {
     try {
       const { data: posts } = await safeSupabaseQuery<any>(() =>
@@ -208,13 +210,16 @@ export async function fetchBrainLoverInteractions(patientId: string): Promise<Br
           .select("*")
           .eq("user_id", patientId)
           .ilike("type", "brainlover_%")
+          .is("acknowledged_at", null)
           .order("created_at", { ascending: false })
           .limit(5)
       );
 
         if (posts && Array.isArray(posts)) {
           posts.forEach((p) => {
-            // Skip if this interaction was dismissed
+            // Skip acknowledged rows (belt-and-suspenders alongside the
+            // server-side filter) and locally dismissed ids.
+            if (p.acknowledged_at) return;
             if (dismissedIds.has(p.id)) return;
             const typeStr = (p.type || "").replace("brainlover_", "") as 'poke' | 'recommend_video' | 'cheer';
             // Dedup by id only — local list items now carry the
@@ -293,7 +298,29 @@ export function dismissBrainLoverInteraction(patientId: string, interactionId: s
     if (type === 'poke') localStorage.removeItem(`fb_poke_${patientId}`);
     if (type === 'recommend_video') localStorage.removeItem(`fb_recommended_video_${patientId}`);
 
-    // Update unified list
+    // Server-side acknowledgement (migration 52) — the ONLY dismiss that
+    // survives reload on the recipient's device. The old code marked only
+    // the sender's browser list, making recipient dismisses a silent no-op.
+    // Fire-and-forget: callers already hide the item optimistically.
+    (async () => {
+      try {
+        const { supabase, safeSupabaseQuery } = await import("@/lib/supabase");
+        const { error } = await safeSupabaseQuery(() =>
+          (supabase.from("community_posts") as any)
+            .update({ acknowledged_at: new Date().toISOString() })
+            .eq("id", interactionId)
+            .eq("user_id", patientId)
+            .is("acknowledged_at", null)
+        );
+        if (error) {
+          console.warn("[FB-DEBUG] dismissBrainLoverInteraction server ack failed (will reappear on reload):", error);
+        }
+      } catch (e) {
+        console.warn("[FB-DEBUG] dismissBrainLoverInteraction server ack error:", e);
+      }
+    })();
+
+    // Update unified list (same-device instant + legacy senders)
     const listKey = `fb_brainlover_interactions_${patientId}`;
     const existingListStr = localStorage.getItem(listKey);
     if (existingListStr) {
