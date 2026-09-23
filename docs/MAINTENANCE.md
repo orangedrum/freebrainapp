@@ -52,10 +52,15 @@
       `fb-session-notify` event, dismiss marks read. Honors the
       `sessionReminders` granular toggle — the first preference that gates
       something real.
-- [ ] **Step 0 (part 2, open): remaining toggles.** Wire `checkinReminders`
-      (KeepMoving/auto-open modal), `teamRallies` (rally banner),
-      `sosAlerts`, cheers/pokes banners, and streak/rank surfaces through
-      `isNotificationEnabled`, same pattern as the session banner.
+- [x] **Step 0 (part 2a, shipped): prefs gate interruptions, never content.**
+      `BrainLoverSOSAlert` honors `freebrainerSOS`. Deliberately NOT gated:
+      check-in auto-open modal (it's the only opener — gating it would strand
+      users with no way to check in); dashboard content, pages, Wall, data
+      displays. Orphan banners `TeamRallyBanner` + `BrainLoverAlertsBanner`
+      were never mounted anywhere (built, never wired — mounting them is a
+      product/layout decision, not a prefs task); their future toggles
+      (`teamRallies`, `sosAlerts`, `pokes`, `cheers`, `videoRecommendations`)
+      apply when/if they mount, plus push/email versions in steps 3–4.
 - [x] **Step 1 (shipped): installability.** `vite-plugin-pwa`
       (injectManifest, `src/sw.ts`), PNG icons, `usePWAUpdate` mounted in
       `App`. If update behavior ever surprises: `src/hooks/usePWAUpdate.ts`

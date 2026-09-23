@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, safeSupabaseQuery } from "@/lib/supabase";
 import { isNotificationEnabled } from "@/lib/notificationPreferences";
+import { useToast } from "@/hooks/use-toast";
 
 export interface SessionInvite {
   id: string;
@@ -20,6 +21,9 @@ export interface SessionInvite {
  */
 export function useSessionNotifications(userId: string | undefined, role: string) {
   const [invites, setInvites] = useState<SessionInvite[]>([]);
+  const { toast } = useToast();
+  // IDs currently being dismissed — blocks double-taps racing the write.
+  const dismissingRef = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!userId) {
@@ -66,17 +70,33 @@ export function useSessionNotifications(userId: string | undefined, role: string
   }, [load]);
 
   const markRead = useCallback(async (id: string) => {
+    if (dismissingRef.current.has(id)) return;
+    dismissingRef.current.add(id);
+    // Optimistic removal — reverted below if the write fails, so a failed
+    // dismiss can never silently resurrect on the next reload.
+    const removed = invites.find((i) => i.id === id) || null;
     setInvites((prev) => prev.filter((i) => i.id !== id));
     try {
-      await safeSupabaseQuery(() =>
+      const { error } = await safeSupabaseQuery(() =>
         (supabase.from("session_notifications") as any)
           .update({ read_at: new Date().toISOString() })
           .eq("id", id)
       );
+      if (error) {
+        if (removed) setInvites((prev) => [removed, ...prev]);
+        toast({
+          title: "Couldn't dismiss",
+          description: "The invite is still unread — check your connection and try again.",
+          variant: "destructive",
+        });
+      }
     } catch (e) {
       console.warn("[FB-DEBUG] useSessionNotifications markRead failed (non-fatal):", e);
+      if (removed) setInvites((prev) => [removed, ...prev]);
+    } finally {
+      dismissingRef.current.delete(id);
     }
-  }, []);
+  }, [invites, toast]);
 
   return { invites, markRead, reload: load };
 }

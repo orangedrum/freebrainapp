@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ShieldAlert, Heart, Send, Mic, Loader2 } from "lucide-react";
 import { sendBrainLoverInteraction } from "@/lib/brainloverInteractions";
+import { isNotificationEnabled } from "@/lib/notificationPreferences";
 import { useToast } from "@/hooks/use-toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
@@ -39,6 +40,11 @@ export function BrainLoverSOSAlert({
   });
 
   const firstName = patientName.split(" ")[0];
+
+  // Honor the freebrainerSOS preference (defaults ON — only users who
+  // explicitly opted out skip this reply card; the SOS itself still lands
+  // on the Wall and Updates).
+  if (!isNotificationEnabled(caregiverId, "brainlover", "freebrainerSOS")) return null;
 
   const handleSend = async () => {
     setSending(true);
