@@ -78,11 +78,27 @@
   `spared` array for keeper aliases). See `docs/test-accounts.md` for the
   alias conventions.
 
-## Preview deployments (Vercel)
-- Vercel **Deployment Protection (SSO wall)** on preview URLs breaks PWA
+## Preview deployments (Vercel)- Vercel **Deployment Protection (SSO wall)** on preview URLs breaks PWA
   verification AND real-user testing: manifest fetches 302 to `/login`
   ("No manifest detected"), and anyone without a Vercel login (i.e. every
   tester, every magic-link clicker) hits the wall instead of the app.
   Keep protection OFF on the branch under test, or test install/push on
   the production domain. Decided 2026-09-21 after a full false-alarm
   installability investigation (code was correct; the wall was not).
+- Verified 2026-09-21: prod PWA installs cleanly from full Chrome (step 1
+  closed). Beware stale preview URLs (immutable per deploy) — always verify
+  against the newest deployment.
+
+## CI Lint (red on main — pre-existing, not a release blocker)
+
+- `npm run lint` (`eslint .`) fails with ~685 `no-explicit-any` errors plus
+  max-lines violations across dozens of files — the codebase's own idiom,
+  predating all current work. CI only runs on pushes to main/master, so
+  feature branches never surfaced it; the first main push in a while turned
+  it red. Decided 2026-09-21: do NOT smuggle the cleanup into releases.
+- Paths forward (owner decision): (a) dedicated typing sprint file-by-file
+  on its own branch; (b) scope CI lint to changed files; (c) leave red.
+  Until then: every release must add ZERO new lint problems (verify with
+  `npx eslint <touched-files>` per-line, as done 2026-09-21).
+- Infra notices alongside (not code): Node 20 runner deprecation, Ubuntu
+  image migration — handle during the next CI maintenance pass.
