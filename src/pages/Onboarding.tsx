@@ -34,6 +34,7 @@ import { StepBrainLoverFlow } from "@/components/onboarding/StepBrainLoverFlow";
 import { FreeBrainerSteps } from "@/components/onboarding/FreeBrainerSteps";
 import { StepMagicLinkAuth } from "@/components/onboarding/StepMagicLinkAuth";
 import { StepInstallApp } from "@/components/onboarding/StepInstallApp";
+import { BrainFactLoader } from "@/components/shared/BrainFactLoader";
 import { StepConsent } from "@/components/onboarding/StepConsent";
 import type { ManagementMode } from "@/components/onboarding/bl/BLStepManagementMode";
 
@@ -46,7 +47,7 @@ import { computeInviteIntent, type InviteKind } from "@/lib/inviteRouting";
 
 export default function Onboarding() {
   const { t } = useTranslation();
-  const { session, refreshRole, user, onboardingCompleted } = useAuth();
+  const { session, refreshRole, user, userRole, onboardingCompleted } = useAuth();
   const { toast } = useToast();
   const speak = useSpeak();
   const { isProcessing: photoProcessing, handlePhotoUpload } = usePhotoUpload();
@@ -320,16 +321,70 @@ export default function Onboarding() {
   });
 
   // ── Resume pending onboarding after magic-link auth ──
+  // Three past failure modes, all handled here:
+  // 1. The first session emission after a link click can predate
+  //    email_confirmed_at propagation → the handler re-saved pending and
+  //    returned false, and NOTHING re-fired this effect (hang until the next
+  //    session event, far away). Now: actively refresh the user record, then
+  //    retry on a bounded timer.
+  // 2. Corrupt pending JSON retried forever → now dropped on parse failure.
+  // 3. Silent static step during ~15 sequential writes + an email send
+  //    (looks hung; users reload mid-flight and corrupt state) → now a
+  //    full-screen loader, plus a stuck escape hatch.
+  const [resuming, setResuming] = useState(false);
+  const [resumeStuck, setResumeStuck] = useState(false);
+  const [resumeTick, setResumeTick] = useState(0);
+  const resumeAttempts = useRef(0);
+  const MAX_RESUME_ATTEMPTS = 24; // ~2 min at 5s intervals
+
   useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRetry = () => {
+      if (cancelled) return;
+      if (resumeAttempts.current++ < MAX_RESUME_ATTEMPTS) {
+        timer = setTimeout(() => {
+          if (!cancelled) setResumeTick((x) => x + 1);
+        }, 5000);
+      } else {
+        console.warn("[FB-DEBUG] Resume gave up after ~2 min — showing retry UI.");
+        setResumeStuck(true);
+        setResuming(false);
+      }
+    };
     const pendingData = localStorage.getItem("pendingOnboarding");
     console.log("[FB-DEBUG] Onboarding resume check:", {
       hasSession: !!session?.user,
       userId: session?.user?.id,
       hasPending: !!pendingData,
     });
-    if (session?.user && pendingData) {
+    if (!session?.user || !pendingData) return;
+    (async () => {
+      let data: any;
       try {
-        const data = JSON.parse(pendingData);
+        data = JSON.parse(pendingData);
+      } catch (e) {
+        // Corrupt blob: drop it so resume can never loop on garbage.
+        console.error("Corrupt pendingOnboarding — dropping it.", e);
+        localStorage.removeItem("pendingOnboarding");
+        return;
+      }
+      setResuming(true);
+      try {
+        // Active refresh BEFORE gating: never trust the first emission.
+        try {
+          const { data: fresh } = await supabase.auth.getUser();
+          if (cancelled) return;
+          if (!fresh?.user?.email_confirmed_at && !isDevBypassUser(undefined)) {
+            console.log("[FB-DEBUG] Resume waiting on email confirmation; retrying…");
+            scheduleRetry();
+            return;
+          }
+        } catch (e) {
+          console.warn("[FB-DEBUG] Resume user refresh failed; retrying…", e);
+          scheduleRetry();
+          return;
+        }
         console.log("[FB-DEBUG] Resuming pending onboarding:", {
           flowType: data.flowType,
           hasSubAccountName: !!data.subAccountName,
@@ -338,29 +393,60 @@ export default function Onboarding() {
           managementMode: data.managementMode,
         });
         // Do NOT remove pendingOnboarding yet — let the handler remove it on success.
-        // This way if the handler fails, we can retry on next load.
+        // This way if the handler fails, we retry (bounded) instead of hanging.
         if (data.flowType === "freebrainer") {
-          handleComplete(data).then((success) => {
-            console.log("[FB-DEBUG] FreeBrainer resume result:", success);
-            if (success) {
-              localStorage.removeItem("pendingOnboarding");
-              setStep(15);
-            }
-          });
+          const success = await handleComplete(data);
+          console.log("[FB-DEBUG] FreeBrainer resume result:", success);
+          if (cancelled) return;
+          if (success) {
+            resumeAttempts.current = 0;
+            localStorage.removeItem("pendingOnboarding");
+            setResuming(false);
+            setStep(15);
+          } else {
+            scheduleRetry();
+          }
         } else {
-          handleCompleteBrainLover(data).then((success) => {
-            console.log("[FB-DEBUG] BrainLover resume result:", success);
-            if (success) {
-              localStorage.removeItem("pendingOnboarding");
-            }
-          });
+          const success = await handleCompleteBrainLover(data);
+          console.log("[FB-DEBUG] BrainLover resume result:", success);
+          if (cancelled) return;
+          if (success) {
+            resumeAttempts.current = 0;
+            localStorage.removeItem("pendingOnboarding");
+            setResuming(false);
+          } else {
+            scheduleRetry();
+          }
         }
       } catch (e) {
-        console.error("Failed to parse pending onboarding data", e);
+        console.error("Resume failed with exception; retrying…", e);
+        scheduleRetry();
       }
-    }
+    })();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [session, resumeTick]);
+
+  // ── Stranded recovery: verified session, nothing to resume, nothing done ──
+  // Cross-device hole: pendingOnboarding lives in the STARTING browser's
+  // localStorage, so an email opened elsewhere verifies the account but
+  // leaves no signup data to complete. Previously this silently restarted at
+  // step 1 (data-loss confusion). Now: one honest banner explaining it, with
+  // a continue path. Shown once per session; mid-flow and completed users
+  // can never match (no session pre-auth; role/flag set post-completion).
+  const [showStranded, setShowStranded] = useState(false);
+  useEffect(() => {
+    if (!session?.user || onboardingCompleted) return;
+    if (isDevBypassUser(undefined)) return;
+    if (userRole) return;
+    if (localStorage.getItem("pendingOnboarding")) return;
+    if (sessionStorage.getItem("fb_stranded_seen")) return;
+    setShowStranded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, onboardingCompleted, userRole]);
 
   // ── Step 14 (FreeBrainer): auto-send OTP + stash pending ──
   // Email was captured at the age gate (step 2), so when the user reaches
@@ -453,6 +539,39 @@ export default function Onboarding() {
 const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 : 9);
 
   // ── Render ──
+  // While resume is working, show progress — never a static step (users
+  // reload "hung" pages mid-write and corrupt state).
+  if (resuming && !resumeStuck) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <BrainFactLoader isLoading />
+      </div>
+    );
+  }
+  if (resumeStuck) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <Card className="border-2 shadow-xl">
+            <CardContent className="p-6 md:p-10 flex flex-col items-center text-center space-y-4">
+              <h2 className="text-2xl font-bold">
+                {t("onboarding.resumeStuckTitle", "Taking longer than usual…")}
+              </h2>
+              <p className="text-muted-foreground max-w-md">
+                {t("onboarding.resumeStuckDesc", "Your signup is safe — finishing it is just taking a while. Tap below to try again.")}
+              </p>
+              <Button
+                className="w-full h-14 text-lg font-bold"
+                onClick={() => window.location.reload()}
+              >
+                {t("onboarding.resumeStuckRetry", "Try again")}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -486,6 +605,26 @@ const totalSteps = flowType === "freebrainer" ? 15 : (inviteIntent.invited ? 7 :
 
         <Card className="border-2 shadow-xl">
           <CardContent className="p-4 md:p-10">
+            {showStranded && (
+              <div className="mb-6 p-4 rounded-xl border-2 border-info/30 bg-info/5 text-left space-y-2">
+                <p className="font-bold">
+                  {t("onboarding.strandedTitle", "Email verified ✓ — one thing missing")}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {t("onboarding.strandedDesc", "Your in-progress signup was on the device where you started, so there's nothing to finish here. Just continue below — your email is already confirmed.")}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    sessionStorage.setItem("fb_stranded_seen", "1");
+                    setShowStranded(false);
+                  }}
+                >
+                  {t("onboarding.strandedContinue", "Continue setup")}
+                </Button>
+              </div>
+            )}
             {/* Step 1: Role selection */}
             {step === 1 && <StepRoleSelectionInline t={t} setFlowType={setFlowType} setCaregiverType={setCaregiverType} setStep={setStep} />}
 

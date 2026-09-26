@@ -510,6 +510,12 @@
     "inviteSavedTitle": "¡Invitación guardada!",
     "inviteSavedDesc": "Enviaremos una invitación a {{email}} en cuanto termines de configurar.",
     "saveErrorTitle": "Error al Guardar",
+    "resumeStuckTitle": "Está tardando más de lo normal…",
+    "resumeStuckDesc": "Tu registro está a salvo — solo está tardando en completarse. Toca abajo para intentarlo de nuevo.",
+    "resumeStuckRetry": "Intentar de nuevo",
+    "strandedTitle": "Correo verificado ✓ — falta una cosa",
+    "strandedDesc": "Tu registro en curso estaba en el dispositivo donde empezaste, así que no hay nada que terminar aquí. Continúa abajo — tu correo ya está confirmado.",
+    "strandedContinue": "Continuar configuración",
     "firstMovementPost": "¡Acabo de completar mi primera sesión de movimiento! ✅",
     "magicAuth": {
       "title": "Bienvenido a FreeBrain",

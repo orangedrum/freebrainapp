@@ -714,6 +714,12 @@
     "inviteSavedTitle": "Convite salvo!",
     "inviteSavedDesc": "Enviaremos um convite para {{email}} assim que você concluir a configuração.",
     "saveErrorTitle": "Falha ao Salvar",
+    "resumeStuckTitle": "Está demorando mais que o normal…",
+    "resumeStuckDesc": "Seu cadastro está seguro — a conclusão só está demorando. Toque abaixo para tentar de novo.",
+    "resumeStuckRetry": "Tentar de novo",
+    "strandedTitle": "E-mail verificado ✓ — falta uma coisa",
+    "strandedDesc": "Seu cadastro em andamento estava no dispositivo onde você começou, então não há nada para concluir aqui. Continue abaixo — seu e-mail já está confirmado.",
+    "strandedContinue": "Continuar configuração",
     "firstMovementPost": "Acabei de completar minha primeira sessão de movimento! ✅",
     "magicAuth": {
       "title": "Bem-vindo ao FreeBrain",

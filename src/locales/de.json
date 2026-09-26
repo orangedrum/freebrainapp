@@ -714,6 +714,12 @@
     "inviteSavedTitle": "Einladung gespeichert!",
     "inviteSavedDesc": "Wir senden eine Einladung an {{email}}, sobald Sie die Einrichtung abschließen.",
     "saveErrorTitle": "Speichern fehlgeschlagen",
+    "resumeStuckTitle": "Dauert länger als gewöhnlich …",
+    "resumeStuckDesc": "Deine Registrierung ist sicher — der Abschluss dauert nur etwas. Tippe unten, um es erneut zu versuchen.",
+    "resumeStuckRetry": "Erneut versuchen",
+    "strandedTitle": "E-Mail verifiziert ✓ — eine Sache fehlt",
+    "strandedDesc": "Deine begonnene Registrierung war auf dem Gerät, auf dem du angefangen hast. Mach einfach unten weiter — deine E-Mail ist bereits bestätigt.",
+    "strandedContinue": "Weiter einrichten",
     "firstMovementPost": "Gerade meine erste Bewegungssitzung abgeschlossen! ✅",
     "magicAuth": {
       "title": "Willkommen bei FreeBrain",

@@ -714,6 +714,12 @@
     "inviteSavedTitle": "Invitation enregistrée !",
     "inviteSavedDesc": "Nous enverrons une invitation à {{email}} dès que vous aurez terminé la configuration.",
     "saveErrorTitle": "Échec de l'enregistrement",
+    "resumeStuckTitle": "C'est plus long que prévu…",
+    "resumeStuckDesc": "Votre inscription est en sécurité — la finalisation prend juste du temps. Touchez ci-dessous pour réessayer.",
+    "resumeStuckRetry": "Réessayer",
+    "strandedTitle": "E-mail vérifié ✓ — il manque une chose",
+    "strandedDesc": "Votre inscription en cours se trouvait sur l'appareil où vous avez commencé. Continuez ci-dessous — votre e-mail est déjà confirmé.",
+    "strandedContinue": "Continuer la configuration",
     "firstMovementPost": "Je viens de terminer ma première séance de mouvement ! ✅",
     "magicAuth": {
       "title": "Bienvenue sur FreeBrain",

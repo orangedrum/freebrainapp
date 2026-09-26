@@ -477,6 +477,12 @@
     "inviteSavedTitle": "Invite saved!",
     "inviteSavedDesc": "We'll send an invite to {{email}} as soon as you finish setting up.",
     "saveErrorTitle": "Save Failed",
+    "resumeStuckTitle": "Taking longer than usual…",
+    "resumeStuckDesc": "Your signup is safe — finishing it is just taking a while. Tap below to try again.",
+    "resumeStuckRetry": "Try again",
+    "strandedTitle": "Email verified ✓ — one thing missing",
+    "strandedDesc": "Your in-progress signup was on the device where you started, so there's nothing to finish here. Just continue below — your email is already confirmed.",
+    "strandedContinue": "Continue setup",
     "firstMovementPost": "Just completed my first movement session! ✅",
     "magicAuth": {
       "title": "Welcome to FreeBrain",
