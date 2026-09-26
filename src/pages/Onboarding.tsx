@@ -360,7 +360,12 @@ export default function Onboarding() {
     });
     if (!session?.user || !pendingData) return;
     (async () => {
-      let data: any;
+      let data: {
+      flowType: string;
+      subAccountName?: unknown;
+      subAccountPatientId?: unknown;
+      managementMode?: unknown;
+    };
       try {
         data = JSON.parse(pendingData);
       } catch (e) {
@@ -445,7 +450,6 @@ export default function Onboarding() {
     if (localStorage.getItem("pendingOnboarding")) return;
     if (sessionStorage.getItem("fb_stranded_seen")) return;
     setShowStranded(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, onboardingCompleted, userRole]);
 
   // ── Step 14 (FreeBrainer): auto-send OTP + stash pending ──
