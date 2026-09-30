@@ -427,7 +427,8 @@
   "common": {
     "dictate": "Ditar",
     "listening": "Ouvindo…",
-    "speechUnsupported": "A entrada por voz não é suportada neste navegador."
+    "speechUnsupported": "A entrada por voz não é suportada neste navegador.",
+    "buildStamp": "Build {{id}}"
   },
   "playlistManager": {
     "title": "Playlists de Movimento do YouTube",

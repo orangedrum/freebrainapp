@@ -226,7 +226,8 @@
   "common": {
     "dictate": "Dictate",
     "listening": "Listening…",
-    "speechUnsupported": "Voice input isn't supported on this browser."
+    "speechUnsupported": "Voice input isn't supported on this browser.",
+    "buildStamp": "Build {{id}}"
   },
   "roles": {
     "user": "User",

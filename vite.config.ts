@@ -5,6 +5,10 @@ import path from "path";
 import { componentTagger } from "@leadconnector/vibe-tagger";
 
 export default defineConfig(({ mode }) => ({
+  define: {
+    // Baked-in build timestamp for the user-visible build stamp (buildInfo).
+    __FB_BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   server: {
     host: "::",
     port: 8080,

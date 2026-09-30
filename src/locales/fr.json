@@ -427,7 +427,8 @@
   "common": {
     "dictate": "Dicter",
     "listening": "Écoute…",
-    "speechUnsupported": "La saisie vocale n'est pas prise en charge sur ce navigateur."
+    "speechUnsupported": "La saisie vocale n'est pas prise en charge sur ce navigateur.",
+    "buildStamp": "Build {{id}}"
   },
   "playlistManager": {
     "title": "Playlists de Mouvement YouTube",

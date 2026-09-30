@@ -427,7 +427,8 @@
   "common": {
     "dictate": "Diktieren",
     "listening": "Zuhören…",
-    "speechUnsupported": "Spracheingabe wird in diesem Browser nicht unterstützt."
+    "speechUnsupported": "Spracheingabe wird in diesem Browser nicht unterstützt.",
+    "buildStamp": "Build {{id}}"
   },
   "playlistManager": {
     "title": "YouTube Bewegungs-Wiedergabelisten",

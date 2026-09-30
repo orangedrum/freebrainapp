@@ -953,7 +953,8 @@
   "common": {
     "dictate": "Dictar",
     "listening": "Escuchando…",
-    "speechUnsupported": "La entrada por voz no es compatible con este navegador."
+    "speechUnsupported": "La entrada por voz no es compatible con este navegador.",
+    "buildStamp": "Build {{id}}"
   },
   "videoPlayer": {
     "play": "Reproducir",
