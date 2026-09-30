@@ -5,6 +5,8 @@ import { mockSupabaseClient } from './mockSupabase';
 
 const supabaseUrl = 'https://omcbwbhtjrozbgvzqdya.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tY2J3Ymh0anJvemJndnpxZHlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzOTYwMDAsImV4cCI6MjA2OTk3MjAwMH0.n60lDzNIU7kJILSxx5H20gZRQ6yteyxEkkj0aM6jRiU';
+// Public by design (ships in the JS bundle; RLS + JWT do the protecting).
+export const SUPABASE_ANON_KEY = supabaseAnonKey;
 
 // Exported for the parent allowlist guide (shows families which domains to
 // allow on a child's restricted phone). No behavior change.

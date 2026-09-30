@@ -14,7 +14,7 @@
  * NOTE: send-push currently accepts any authenticated caller; add JWT role
  * checks + rate limiting before public launch.
  */
-import { supabase } from "@/lib/supabase";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase";
 
 export interface PushContent {
   title: string;
@@ -31,19 +31,40 @@ export async function notifyPush(userIds: (string | null | undefined)[], content
   const targets = [...new Set(userIds.filter(isPushableId))];
   if (targets.length === 0) return;
   try {
-    const { data, error } = await supabase.functions.invoke("send-push", {
-      body: {
+    // Direct fetch (NOT supabase.functions.invoke): invoke-shaped requests
+    // were dying headerless at the gateway (400, no CORS headers, no
+    // execution) while identical manual fetches got proper responses.
+    // Mirror the proven shape: apikey + live user JWT, plain JSON body.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      console.warn("[FB-DEBUG] notifyPush skipped: no session (push needs a signed-in sender).");
+      return;
+    }
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
         user_ids: targets,
         title: content.title,
         body: content.body.slice(0, 120),
         url: content.url || "/support",
         tag: content.tag,
-      },
+      }),
     });
-    if (error) {
-      console.warn("[FB-DEBUG] notifyPush invoke failed (non-fatal):", error.message || error);
+    const text = await res.text().catch(() => "");
+    if (!res.ok) {
+      console.warn(`[FB-DEBUG] notifyPush invoke failed (non-fatal): HTTP ${res.status} ${text.slice(0, 200)}`);
     } else {
-      console.log("[FB-DEBUG] notifyPush delivered:", JSON.stringify({ to: targets.length, sent: (data as any)?.sent ?? null, pruned: (data as any)?.pruned ?? null, failed: (data as any)?.failed ?? null, tag: content.tag }));
+      try {
+        const data = JSON.parse(text);
+        console.log("[FB-DEBUG] notifyPush delivered:", JSON.stringify({ to: targets.length, sent: data?.sent ?? null, pruned: data?.pruned ?? null, failed: data?.failed ?? null, tag: content.tag }));
+      } catch {
+        console.log("[FB-DEBUG] notifyPush delivered (unparsed response).");
+      }
     }
   } catch (e) {
     console.warn("[FB-DEBUG] notifyPush error (non-fatal):", e);
