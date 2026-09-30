@@ -92,6 +92,7 @@ Deno.serve(async (req: Request) => {
 
     let sent = 0;
     let failed = 0;
+    let sampleError: string | null = null;
     const deadEndpoints: string[] = [];
     await Promise.all(
       (subs as any[]).map(async (sub) => {
@@ -107,7 +108,13 @@ Deno.serve(async (req: Request) => {
             deadEndpoints.push(sub.endpoint);
           } else {
             failed++;
-            console.warn("[send-push] send failed:", e?.message || e);
+            // First failure message only (proves the cause: usually 401 =
+            // VAPID pair mismatch between the app's public key and the
+            // server's private key).
+            if (!sampleError) {
+              sampleError = `status ${e?.statusCode ?? "?"}: ${e?.message || e}`;
+            }
+            console.warn("[send-push] send failed:", e?.statusCode, e?.message || e);
           }
         }
       })
@@ -116,7 +123,7 @@ Deno.serve(async (req: Request) => {
       await supabase.from("push_subscriptions").delete().in("endpoint", deadEndpoints);
     }
     return Response.json(
-      { sent, pruned: deadEndpoints.length, failed },
+      { sent, pruned: deadEndpoints.length, failed, sampleError },
       { headers: corsHeaders }
     );
   } catch (e: any) {

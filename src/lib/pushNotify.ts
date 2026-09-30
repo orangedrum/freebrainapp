@@ -61,7 +61,7 @@ export async function notifyPush(userIds: (string | null | undefined)[], content
     } else {
       try {
         const data = JSON.parse(text);
-        console.log("[FB-DEBUG] notifyPush delivered:", JSON.stringify({ to: targets.length, sent: data?.sent ?? null, pruned: data?.pruned ?? null, failed: data?.failed ?? null, tag: content.tag }));
+        console.log("[FB-DEBUG] notifyPush delivered:", JSON.stringify({ to: targets.length, sent: data?.sent ?? null, pruned: data?.pruned ?? null, failed: data?.failed ?? null, sampleError: data?.sampleError ?? null, tag: content.tag }));
       } catch {
         console.log("[FB-DEBUG] notifyPush delivered (unparsed response).");
       }

@@ -363,3 +363,33 @@ If an invite is expired or invalid:
 - ❌ Define React components inside other component functions
 - ❌ Import a component file that doesn't exist yet
 - ❌ Run git commands (checkout, commit, pull, push, reset) — user handles all git commands themselves
+
+---
+
+## 12. Debugging Discipline (learned 2026-09-30 — read before theorizing)
+
+When production misbehaves, work evidence-first in this order. Skipping
+steps is how multi-hour spirals happen:
+
+1. **Prove which code runs.** Bundle hash / build stamp / `FreeBrain build:`
+   console line FIRST. Never diagnose behavior until the running code is
+   identified — stale service-worker bundles and immutable preview URLs have
+   impersonated "current code" repeatedly.
+2. **Read your own recent changes as suspects.** New/modified code paths
+   (purges, gates, migrations) get audited for overreach BEFORE blaming
+   environment, browser, cache, or user setup. The checklist: what did I
+   last touch that runs on this path? What does it delete/overwrite/gate?
+3. **Trust structured logs over narrative.** Fail-loud beats fail-silent:
+   every failure path must log the verdict (which key, which row, which
+   call). If a failure produces no log, the instrumentation is the bug.
+4. **Distinguish stores with identical names.** Vercel env vars, Supabase
+   Secrets, and `.env` are THREE different stores. A value "set" in the
+   wrong store is the same as unset — verify location, exact name, and
+   which build consumed it, never just existence.
+5. **Size your payloads.** Anything embedded in JWTs, URLs, or QR codes
+   (avatars, blobs, long metadata) breaks Safari/mail handoffs first and
+   silently: no session, no logs, parked at onboarding. References, not
+   blobs — always recover display data post-login from database rows.
+6. **One decisive test per round.** Each debugging turn must name the single
+   observation that would kill the leading theory, and stop when it lands.
+   No stacked hypotheses; no second theory until the first is falsified.
