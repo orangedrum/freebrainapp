@@ -62,6 +62,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
+    // Any rejection anywhere above (corrupt storage, aborted request,
+    // failed user fetch) must still release the loader — otherwise the app
+    // sits on the loading screen forever with zero indication.
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         // Clear the signed-out flag — user has a valid session
@@ -84,9 +87,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
       }
       setIsLoading(false);
+    }).catch((e) => {
+      console.error("[FB-DEBUG] Auth init failed; releasing loader so the app can recover:", e);
+      setSession(null);
+      setUser(null);
+      setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // finally{} guarantees the loader releases even if a fetch throws.
+      try {
       if (session && event !== 'SIGNED_OUT') {
         // Clear the signed-out flag — user has authenticated
         sessionStorage.removeItem('fb_signed_out');
@@ -109,7 +119,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         setUserRoleState(null);
       }
-      setIsLoading(false);
+      } finally {
+        setIsLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
