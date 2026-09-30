@@ -23,6 +23,30 @@ export const supabase = isDevBypassMode()
   : realClient;
 
 /**
+ * Remove cached Supabase auth tokens from this browser.
+ *
+ * Used ONLY as a last resort when session reads time out: a stale token
+ * (expired, or for a DB-wiped test user) can make getSession() attempt a
+ * refresh that pends indefinitely. Callers retry fresh immediately after.
+ * NEVER call this on boot unconditionally — opening a stale magic link with
+ * a valid stored session would nuke the good session (regression seen
+ * 2026-09-30: valid users parked at onboarding step 1).
+ */
+export function purgeStaleStoredSession(): void {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("sb-") && k.endsWith("-auth-token")) {
+        console.log("[FB-DEBUG] Dropping stale stored session.");
+        localStorage.removeItem(k);
+      }
+    }
+  } catch (e) {
+    console.warn("[FB-DEBUG] Token purge skipped:", e);
+  }
+}
+
+/**
  * Safe wrapper for Supabase queries.
  * Prevents uncaught exceptions or network drops from white-screening the UI.
  */

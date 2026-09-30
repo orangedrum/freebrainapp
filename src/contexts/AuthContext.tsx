@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { supabase, purgeStaleStoredSession } from "@/lib/supabase";
 import { withTimeout } from "@/lib/withTimeout";
 import i18n from "@/lib/i18n";
 
@@ -73,15 +73,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // sits on the loading screen forever with zero indication.
     // getSession() itself can pend forever (stale refresh against a stalled
     // network), which used to freeze the loader with zero output — the last
-    // uncovered hang in this file. Time it out: an unreadable session is
-    // treated as signed-out; the auth listener corrects us when ready.
+    // uncovered hang in this file. Time it out; on timeout, purge a possibly
+    // poisoned token and retry ONCE fresh (a magic-link hash in the URL then
+    // processes cleanly); only then degrade to signed-out.
     (async () => {
     try {
-      const sessRes = await withTimeout<{ data: { session: Session | null } }>(
+      let sessRes = await withTimeout<{ data: { session: Session | null } }>(
         supabase.auth.getSession(),
         12000,
         "init getSession"
       );
+      if (!sessRes.ok) {
+        purgeStaleStoredSession();
+        sessRes = await withTimeout<{ data: { session: Session | null } }>(
+          supabase.auth.getSession(),
+          8000,
+          "init getSession retry"
+        );
+      }
       if (!sessRes.ok) {
         console.warn("[FB-DEBUG] Auth init getSession timed out; continuing signed-out.");
         setSession(null);
