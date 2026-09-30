@@ -71,7 +71,10 @@ export async function subscribePush(userId: string): Promise<boolean> {
     console.warn("[FB-DEBUG] subscribePush: push unsupported in this browser (no ServiceWorker/PushManager — e.g. in-app mini-browser). Use full Chrome or the installed app.");
     return false;
   }
-  if (!userId) return false;
+  if (!userId) {
+    console.warn("[FB-DEBUG] subscribePush: no userId (not signed in?) — cannot persist a subscription.");
+    return false;
+  }
   const vapidKey = vapidPublicKey();
   if (!vapidKey) {
     console.warn("[FB-DEBUG] subscribePush: VITE_VAPID_PUBLIC_KEY missing from this build (add it to hosting env, then REBUILD).");
@@ -84,7 +87,10 @@ export async function subscribePush(userId: string): Promise<boolean> {
     }
     if (Notification.permission === "default") {
       const result = await Notification.requestPermission();
-      if (result !== "granted") return false;
+      if (result !== "granted") {
+        console.warn("[FB-DEBUG] subscribePush: permission prompt was DISMISSED (not answered) — permission is still 'default'. Tap the toggle again and choose Allow (not the X).");
+        return false;
+      }
     }
     const registration = await readyRegistration();
     let subscription = await registration.pushManager.getSubscription();
