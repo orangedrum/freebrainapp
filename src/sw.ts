@@ -59,13 +59,19 @@ self.addEventListener("push", (event: PushEvent) => {
       } catch {
         /* badging unsupported — notification still shows */
       }
-      await self.registration.showNotification(data.title || "FreeBrain", {
+      // NotificationOptions in this TS lib lacks `vibrate` — extend locally.
+      const options: NotificationOptions & { vibrate?: number[] } = {
         body: data.body || "",
         icon: "/icon-192.png",
         badge: "/icon-192.png",
+        // Vibration pattern: two pulses. Sound itself is OS-controlled
+        // (ringer mode, per-app notification settings) — no web API can
+        // force it, which is why this is a pattern and not a ringtone.
+        vibrate: [200, 100, 200],
         tag: data.tag,
         data: { url },
-      });
+      };
+      await self.registration.showNotification(data.title || "FreeBrain", options);
     })()
   );
 });
