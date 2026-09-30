@@ -211,6 +211,20 @@ function BrainLoverLoveCard({ item, onDismiss, onWatchVideo }: BrainLoverLoveCar
                 <Play className="h-3.5 w-3.5" /> {t("love.watchVideo")}
               </Button>
             )}
+            {/* Fallback: video object doesn't survive cross-device sends
+                (Supabase rows carry text only), so an unplayable card must
+                still be dismissable — otherwise it sticks forever. Playable
+                cards keep persisting until check-in, by design. */}
+            {!item.video && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs font-semibold text-primary-foreground hover:bg-primary-foreground/10 shrink-0"
+                onClick={onDismiss}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
