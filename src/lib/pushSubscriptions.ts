@@ -67,14 +67,21 @@ export async function getPushState(): Promise<string> {
  * the subscription. Returns true when push is live for this browser.
  */
 export async function subscribePush(userId: string): Promise<boolean> {
-  if (!isPushSupported() || !userId) return false;
+  if (!isPushSupported()) {
+    console.warn("[FB-DEBUG] subscribePush: push unsupported in this browser (no ServiceWorker/PushManager — e.g. in-app mini-browser). Use full Chrome or the installed app.");
+    return false;
+  }
+  if (!userId) return false;
   const vapidKey = vapidPublicKey();
   if (!vapidKey) {
-    console.warn("[FB-DEBUG] subscribePush: VITE_VAPID_PUBLIC_KEY missing");
+    console.warn("[FB-DEBUG] subscribePush: VITE_VAPID_PUBLIC_KEY missing from this build (add it to hosting env, then REBUILD).");
     return false;
   }
   try {
-    if (Notification.permission === "denied") return false;
+    if (Notification.permission === "denied") {
+      console.warn("[FB-DEBUG] subscribePush: Notification permission previously DENIED — code cannot re-prompt; user must re-allow in browser site settings first.");
+      return false;
+    }
     if (Notification.permission === "default") {
       const result = await Notification.requestPermission();
       if (result !== "granted") return false;

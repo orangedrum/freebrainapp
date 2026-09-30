@@ -110,3 +110,9 @@
   warm plain-language banner with a one-tap "Open in Chrome" deep-link, while
   keeping FULL functionality inside the mini-browser (no dead ends, no
   install nags). No user education as a strategy, ever.
+
+## Tabled bugs (reported, deferred deliberately)
+
+- **Recommended-videos flow bug** (reported 2026-09-23 during alerts testing;
+  distinct flow from poke/cheer/dismiss). Revisit AFTER alerts (push live +
+  dismiss verified) — reporter asked to be reminded at that point.
