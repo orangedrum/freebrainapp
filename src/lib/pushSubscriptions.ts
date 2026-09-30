@@ -93,17 +93,42 @@ export async function subscribePush(userId: string): Promise<boolean> {
       }
     }
     const registration = await readyRegistration();
+    const expectedKey = urlBase64ToUint8Array(vapidKey);
     let subscription = await registration.pushManager.getSubscription();
+    // Drop stale subscriptions created WITHOUT our VAPID key (e.g. from
+    // earlier testing rounds): their keys are unreadable, so reusing them
+    // fails silently below. Unsubscribe and start fresh instead.
+    const expectedKeyB64 = arrayBufferToBase64(
+      expectedKey.buffer as ArrayBuffer
+    );
+    const currentKey = subscription?.options?.applicationServerKey ?? null;
+    const currentKeyB64 = currentKey ? arrayBufferToBase64(currentKey) : "";
+    if (subscription && (!currentKeyB64 || currentKeyB64 !== expectedKeyB64)) {
+      console.warn(
+        "[FB-DEBUG] subscribePush: dropping stale subscription (wrong/missing VAPID key) and re-subscribing."
+      );
+      try {
+        await subscription.unsubscribe();
+      } catch {
+        /* already dead — proceed to fresh subscribe */
+      }
+      subscription = null;
+    }
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        applicationServerKey: expectedKey,
       });
     }
     const endpoint = subscription.endpoint;
     const p256dh = arrayBufferToBase64(subscription.getKey("p256dh"));
     const auth = arrayBufferToBase64(subscription.getKey("auth"));
-    if (!endpoint || !p256dh || !auth) return false;
+    if (!endpoint || !p256dh || !auth) {
+      console.warn(
+        "[FB-DEBUG] subscribePush: subscription has no usable keys even after a fresh subscribe — clear this site's data and retry."
+      );
+      return false;
+    }
     const deviceLabel =
       ((navigator as any).userAgentData?.platform as string) ||
       navigator.platform ||
