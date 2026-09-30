@@ -188,7 +188,10 @@ export const StepAgeGate: React.FC<StepAgeGateProps> = ({
           data: {
             fb_invite_patient_id: session?.user?.id ?? null,
             fb_invite_patient_name: childName || null,
-            fb_invite_patient_avatar: childPhoto || null,
+            // No avatar here: large blobs inflate the JWT past what Safari
+            // and mail handoffs tolerate (truncated link = no credentials =
+            // parked at onboarding with zero logs). Recovered post-login
+            // from the brainlover_invites row by invitee email.
             fb_invite_role: "brainlover",
             fb_invite_kind: "parent_invite",
             fb_invite_inviter_name: childName || null,

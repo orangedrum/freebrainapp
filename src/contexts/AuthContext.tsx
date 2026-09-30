@@ -83,7 +83,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         12000,
         "init getSession"
       );
-      if (!sessRes.ok) {
+      // Purge + retry ONLY with fresh credentials incoming (discarding
+      // storage is safe then — the hash provides the new session). Never
+      // on a merely-slow read: that would delete a valid session.
+      const hashHasCredentials =
+        typeof window !== "undefined" && /access_token=|error_description=/.test(window.location.hash);
+      if (!sessRes.ok && hashHasCredentials) {
         purgeStaleStoredSession();
         sessRes = await withTimeout<{ data: { session: Session | null } }>(
           supabase.auth.getSession(),

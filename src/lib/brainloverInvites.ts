@@ -356,12 +356,16 @@ export async function sendBrainLoverInvite(
     options: {
       emailRedirectTo: redirectUrl,
       shouldCreateUser: true,
+      // NOTE: never put the avatar (or any large blob) in metadata — it gets
+      // embedded in the JWT access token, ballooning magic-link URLs past
+      // what Safari/mail handoffs tolerate. Truncated links arrive with no
+      // credentials: no session, no logs, parked at onboarding. The avatar
+      // is recovered post-login from the brainlover_invites row by email.
       data: {
         fb_invite_patient_id: context.patientId,
         fb_invite_caregiver_id: context.caregiverId,
         fb_invite_role: context.role,
         fb_invite_patient_name: context.patientName,
-        fb_invite_patient_avatar: context.patientAvatar,
         fb_invite_inviter_name: context.inviterName,
       },
     },
