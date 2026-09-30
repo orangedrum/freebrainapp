@@ -66,7 +66,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Any rejection anywhere above (corrupt storage, aborted request,
     // failed user fetch) must still release the loader — otherwise the app
     // sits on the loading screen forever with zero indication.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // getSession() itself can pend forever (stale refresh against a stalled
+    // network), which used to freeze the loader with zero output — the last
+    // uncovered hang in this file. Time it out: an unreadable session is
+    // treated as signed-out; the auth listener corrects us when ready.
+    (async () => {
+    try {
+      const sessRes = await withTimeout<{ data: { session: Session | null } }>(
+        supabase.auth.getSession(),
+        12000,
+        "init getSession"
+      );
+      if (!sessRes.ok) {
+        console.warn("[FB-DEBUG] Auth init getSession timed out; continuing signed-out.");
+        setSession(null);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+      const { data: { session } } = sessRes.value;
       if (session) {
         // Clear the signed-out flag — user has a valid session
         sessionStorage.removeItem('fb_signed_out');
@@ -104,12 +122,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
       }
       setIsLoading(false);
-    }).catch((e) => {
+    } catch (e) {
       console.error("[FB-DEBUG] Auth init failed; releasing loader so the app can recover:", e);
       setSession(null);
       setUser(null);
       setIsLoading(false);
-    });
+    }
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       // finally{} guarantees the loader releases even if a fetch throws.
