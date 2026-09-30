@@ -12,6 +12,35 @@ function vapidPublicKey(): string | null {
   return key && key !== "REPLACE_WITH_VAPID_PUBLIC_KEY" ? key : null;
 }
 
+/**
+ * Diagnose the baked-in VAPID public key WITHOUT trusting eyeballs.
+ * Returns null when the key is well-formed, otherwise a plain-English
+ * verdict (wrong key pasted? private key? truncated? whitespace?).
+ */
+function diagnoseVapidKey(key: string): string | null {
+  if (key.trim() !== key) {
+    return "has leading/trailing whitespace (copy-paste artifact) — trim it in the hosting env";
+  }
+  if (key.length === 43) {
+    return "is 43 chars long — that is the PRIVATE key, not the public one. The app needs the 87-char PUBLIC key here; the private key lives only in Supabase Secrets";
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(key)) {
+    return "contains characters outside base64url (check for spaces, line breaks, or quotes pasted in)";
+  }
+  try {
+    const bytes = urlBase64ToUint8Array(key);
+    if (bytes.length !== 65) {
+      return `decodes to ${bytes.length} bytes but a VAPID public key must decode to exactly 65 (uncompressed P-256 point) — value is truncated or from a different pair`;
+    }
+    if (bytes[0] !== 0x04) {
+      return "does not start with 0x04 — not an uncompressed P-256 point, wrong key material";
+    }
+  } catch {
+    return "is not valid base64url at all";
+  }
+  return null;
+}
+
 export function isPushSupported(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -78,6 +107,15 @@ export async function subscribePush(userId: string): Promise<boolean> {
   const vapidKey = vapidPublicKey();
   if (!vapidKey) {
     console.warn("[FB-DEBUG] subscribePush: VITE_VAPID_PUBLIC_KEY missing from this build (add it to hosting env, then REBUILD).");
+    return false;
+  }
+  console.log("[FB-DEBUG] subscribePush: baked key check", {
+    length: vapidKey.length,
+    prefix: vapidKey.slice(0, 6),
+  });
+  const keyDiagnosis = diagnoseVapidKey(vapidKey);
+  if (keyDiagnosis) {
+    console.warn("[FB-DEBUG] subscribePush: baked VAPID public key is malformed —", keyDiagnosis);
     return false;
   }
   try {
