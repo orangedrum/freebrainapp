@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { withTimeout } from "@/lib/withTimeout";
@@ -26,6 +26,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userRole, setUserRoleState] = useState<string | null>(localStorage.getItem('dev_role_override'));
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  // True once role data has been definitively read (even if the answer is
+  // "no role"). Guards the retry effect below: a session without resolved
+  // role data strands users at onboarding step 1 with zero indication.
+  const roleResolvedRef = useRef(false);
+  const roleRetryRef = useRef(0);
 
   const isTestingMode = isAdmin && !!localStorage.getItem('dev_role_override') && localStorage.getItem('dev_role_override') !== 'admin';
 
@@ -180,6 +185,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setOnboardingCompleted(true);
       const override = localStorage.getItem('dev_role_override');
       setUserRoleState(override || 'admin');
+      roleResolvedRef.current = true;
       return;
     }
 
@@ -195,6 +201,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Error fetching role:', roleError);
       return;
     }
+    // Definitive read (even "no role") — the retry effect below stands down.
+    roleResolvedRef.current = true;
 
     if (profileData) {
       setOnboardingCompleted(!!profileData.onboarding_completed);
@@ -253,6 +261,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     await supabase.auth.signOut();
   };
+
+  // Bounded role retry: any path that leaves a live session without resolved
+  // role data (degraded timeouts, transient failures) retries until it
+  // resolves. Without this, guards see userRole null + flag false forever
+  // and pin completed users at onboarding step 1 with zero indication.
+  useEffect(() => {
+    if (!session?.user) {
+      roleResolvedRef.current = false;
+      roleRetryRef.current = 0;
+      return;
+    }
+    if (roleResolvedRef.current) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const attempt = async () => {
+      if (cancelled || roleResolvedRef.current || roleRetryRef.current >= 12) return;
+      roleRetryRef.current++;
+      try {
+        await fetchUserRole(session.user.id, session.user.email || '');
+      } catch (e) {
+        console.warn("[FB-DEBUG] Role retry failed; will retry…", e);
+      }
+      if (!cancelled && !roleResolvedRef.current && roleRetryRef.current < 12) {
+        timer = setTimeout(attempt, 5000);
+      }
+    };
+    timer = setTimeout(attempt, 3000);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
   return (
     <AuthContext.Provider value={{ session, user, isLoading, userRole, onboardingCompleted, setUserRole, isAdmin, isTestingMode, signOut, refreshRole }}>
