@@ -65,14 +65,21 @@
       (injectManifest, `src/sw.ts`), PNG icons, `usePWAUpdate` mounted in
       `App`. If update behavior ever surprises: `src/hooks/usePWAUpdate.ts`
       owns ALL reloads; neither plugin nor SW may reload (see comments).
-- [x] **Step 2 (shipped, needs deploy + live test): push.** VAPID pair
+- [x] **Step 2 (shipped, verifying live): push.** VAPID pair
       generated 2026-09-21. PUBLIC key in `.env` (+ hosting env for prod
       builds). PRIVATE key ONLY in Supabase Secrets as `VAPID_PRIVATE_KEY`
       (+ `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`) — never in git, never
       client-side. Migration 51 (`push_subscriptions`), `send-push` Edge
-      Function (deploy via Dashboard: paste
-      `supabase/functions/send-push/index.ts`), SW push/click/badge handlers;
+      Function (deploy via Dashboard), SW push/click/badge handlers;
       `send-push` prunes dead (410/404) endpoints automatically.
+      Client fan-out wired 2026-09-30 (`pushNotify`: cheer/poke/video/
+      teammate-cheer/SOS/rally invoke send-push fire-and-forget; the
+      subscription row IS the opt-in, no prefs lookup needed cross-device).
+      Push toggle reconciles against real subscription state on load (a
+      default-ON toggle with no subscription lies — fixed).
+      OPEN HARDENING: `send-push` accepts any authenticated caller — add JWT
+      role checks + rate limiting before public launch; push copy is
+      English-only (localize via profiles.locale in function later).
 - [ ] **Steps 3–4 (open): triggers + email.** Design notes: notify the
       SUPPORTER about streaks (bidirectional — freebrainer/brainlover, never
       age-assumed); payloads carry zero health content; quiet hours

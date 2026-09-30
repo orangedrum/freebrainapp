@@ -31,7 +31,7 @@ export async function notifyPush(userIds: (string | null | undefined)[], content
   const targets = [...new Set(userIds.filter(isPushableId))];
   if (targets.length === 0) return;
   try {
-    const { error } = await supabase.functions.invoke("send-push", {
+    const { data, error } = await supabase.functions.invoke("send-push", {
       body: {
         user_ids: targets,
         title: content.title,
@@ -42,6 +42,8 @@ export async function notifyPush(userIds: (string | null | undefined)[], content
     });
     if (error) {
       console.warn("[FB-DEBUG] notifyPush invoke failed (non-fatal):", error.message || error);
+    } else {
+      console.log("[FB-DEBUG] notifyPush delivered:", JSON.stringify({ to: targets.length, sent: (data as any)?.sent ?? null, pruned: (data as any)?.pruned ?? null, failed: (data as any)?.failed ?? null, tag: content.tag }));
     }
   } catch (e) {
     console.warn("[FB-DEBUG] notifyPush error (non-fatal):", e);
