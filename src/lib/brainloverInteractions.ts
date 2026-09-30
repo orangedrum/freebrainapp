@@ -136,6 +136,12 @@ export async function sendBrainLoverInteraction(
   // 3. Dispatch real-time window event
   window.dispatchEvent(new CustomEvent("brainlover_interaction_sent", { detail: interaction }));
 
+  // 4. Push to the recipient's devices (fire-and-forget — never break send).
+  //    No-op when they never subscribed (the subscription row IS the opt-in).
+  import("./pushNotify").then(({ notifyPush, cheerPush }) =>
+    notifyPush([patientId], cheerPush(senderName, type))
+  ).catch((e) => console.warn("[FB-DEBUG] cheer push skipped:", e));
+
   return interaction;
 }
 
@@ -287,6 +293,11 @@ export async function sendTeammateCheer(
       detail: { type: "teammate_cheer", recipientId },
     })
   );
+
+  // Push to the recipient's devices (fire-and-forget).
+  import("./pushNotify").then(({ notifyPush, cheerPush }) =>
+    notifyPush([recipientId], cheerPush(senderName, "teammate_cheer"))
+  ).catch((e) => console.warn("[FB-DEBUG] teammate cheer push skipped:", e));
 }
 
 /**

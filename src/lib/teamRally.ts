@@ -78,6 +78,40 @@ export async function dispatchTeamRally(
   window.dispatchEvent(new CustomEvent("team_rally_dispatched", { detail: newRally }));
   window.dispatchEvent(new CustomEvent("community_post_added", { detail: newRally }));
 
+  // 4. Push to recipients' devices (fire-and-forget — never break dispatch).
+  //    Teammates always; linked caregivers too for SOS (the author is the
+  //    FreeBrainer asking for help). No-op for anyone unsubscribed.
+  (async () => {
+    try {
+      const { notifyPush, sosPush, rallyPush } = await import("./pushNotify");
+      const recipientIds = new Set<string>();
+      if (teamId) {
+        const { data: members } = await safeSupabaseQuery<any[]>(() =>
+          (supabase.from("team_members") as any).select("user_id").eq("team_id", teamId)
+        );
+        (Array.isArray(members) ? members : []).forEach((m: any) => {
+          if (m?.user_id && m.user_id !== userId) recipientIds.add(m.user_id);
+        });
+      }
+      if (type === "sos") {
+        const { data: links } = await safeSupabaseQuery<any[]>(() =>
+          (supabase.from("caregiver_links") as any).select("caregiver_id").eq("patient_id", userId)
+        );
+        (Array.isArray(links) ? links : []).forEach((l: any) => {
+          if (l?.caregiver_id && l.caregiver_id !== userId) recipientIds.add(l.caregiver_id);
+        });
+      }
+      if (recipientIds.size > 0) {
+        await notifyPush(
+          [...recipientIds],
+          type === "sos" ? sosPush(userName) : rallyPush(userName)
+        );
+      }
+    } catch (e) {
+      console.warn("[FB-DEBUG] rally push skipped:", e);
+    }
+  })();
+
   return newRally;
 }
 

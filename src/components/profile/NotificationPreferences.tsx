@@ -23,7 +23,7 @@ import {
   type NotificationPrefs,
   type NotificationChannel,
 } from "@/lib/notificationPreferences";
-import { subscribePush, unsubscribePush } from "@/lib/pushSubscriptions";
+import { subscribePush, unsubscribePush, getPushState } from "@/lib/pushSubscriptions";
 import { useToast } from "@/hooks/use-toast";
 
 interface NotificationPreferencesProps {
@@ -37,11 +37,26 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
 
-  // Load prefs on mount (and when user/role changes)
+  // Load prefs on mount (and when user/role changes). A push toggle stuck
+  // ON with no real subscription lies (nothing can arrive) — reconcile it
+  // against the browser's actual subscription state exactly once per load.
   useEffect(() => {
-    if (userId) {
-      setPrefs(getNotificationPrefs(userId, role));
+    if (!userId) return;
+    const stored = getNotificationPrefs(userId, role);
+    setPrefs(stored);
+    if (stored.channels.push) {
+      getPushState().then((state) => {
+        if (state !== "subscribed") {
+          setPrefs((prev) => {
+            if (!prev || !prev.channels.push) return prev;
+            const next = { ...prev, channels: { ...prev.channels, push: false } };
+            setNotificationPrefs(userId, next);
+            return next;
+          });
+        }
+      }).catch(() => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, role]);
 
   // Persist whenever prefs change (but not on first null state)
