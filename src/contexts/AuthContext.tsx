@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { withTimeout } from "@/lib/withTimeout";
 import i18n from "@/lib/i18n";
 
 type AuthContextType = {
@@ -69,7 +70,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (session) {
         // Clear the signed-out flag — user has a valid session
         sessionStorage.removeItem('fb_signed_out');
-        const { data: authData, error: authErr } = await supabase.auth.getUser();
+        // getUser() can PEND forever (observed in Safari) — a bare await
+        // would freeze the loader with zero output. Time it out and degrade
+        // gracefully (keep the session, skip enrichment) instead. Never sign
+        // out on timeout: slowness is not invalidity.
+        const userRes = await withTimeout<{ data: { user: User | null }; error: { message: string } | null }>(
+          supabase.auth.getUser(),
+          12000,
+          "init getUser"
+        );
+        if (!userRes.ok) {
+          console.warn("[FB-DEBUG] Auth init getUser timed out; continuing degraded (session kept, role will fill in).");
+          setSession(session);
+          setUser(session.user);
+          setIsLoading(false);
+          return;
+        }
+        const { data: authData, error: authErr } = userRes.value;
         if (authErr || !authData?.user) {
           console.warn("Stale session detected (user removed in DB reset). Auto signing out.");
           await supabase.auth.signOut();
@@ -100,7 +117,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (session && event !== 'SIGNED_OUT') {
         // Clear the signed-out flag — user has authenticated
         sessionStorage.removeItem('fb_signed_out');
-        const { data: authData, error: authErr } = await supabase.auth.getUser();
+        const userRes = await withTimeout<{ data: { user: User | null }; error: { message: string } | null }>(
+          supabase.auth.getUser(),
+          12000,
+          "listener getUser"
+        );
+        if (!userRes.ok) {
+          console.warn("[FB-DEBUG] Auth listener getUser timed out; continuing degraded.");
+          setSession(session);
+          setUser(session.user);
+          return;
+        }
+        const { data: authData, error: authErr } = userRes.value;
         if (authErr || !authData?.user) {
           console.warn("Stale auth session on state change. Auto signing out.");
           await supabase.auth.signOut();

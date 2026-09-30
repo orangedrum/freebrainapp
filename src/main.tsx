@@ -5,6 +5,11 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import "./lib/i18n";
 import "./index.css";
+import { FB_BUILD_ID } from "./lib/buildInfo";
+
+// Build stamp in console: "which build is running?" answered without DevTools
+// archaeology. Matches the footer stamp rendered by DashboardLayout.
+console.log("[FB-DEBUG] FreeBrain build:", FB_BUILD_ID);
 
 const LoadingFallback = () => (
   <div className="flex min-h-screen items-center justify-center">
