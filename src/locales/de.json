@@ -1188,7 +1188,7 @@
     "channelEmail": "E-Mail",
     "channelEmailDesc": "An Ihre E-Mail-Adresse gesendete Warnungen",
     "granularSection": "Womit Sie Benachrichtigt Werden",
-    "privacyNote": "Ihre Benachrichtigungseinstellungen werden nur auf diesem Gerät gespeichert und nicht zwischen Geräten synchronisiert.",
+    "privacyNote": "Ihre Benachrichtigungseinstellungen werden zwischen Ihren Geräten synchronisiert, damit die richtigen Hinweise Sie überall erreichen. Sie enthalten keine Gesundheitsdaten.",
     "pushFailed": "Push konnte nicht aktiviert werden",
     "pushFailedDesc": "Berechtigung verweigert oder dieser Browser empfängt keine Push-Nachrichten. In-App-Mitteilungen funktionieren weiterhin.",
     "toggles": {

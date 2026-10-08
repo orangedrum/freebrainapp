@@ -73,19 +73,74 @@
       Function (deploy via Dashboard), SW push/click/badge handlers;
       `send-push` prunes dead (410/404) endpoints automatically.
       Client fan-out wired 2026-09-30 (`pushNotify`: cheer/poke/video/
-      teammate-cheer/SOS/rally invoke send-push fire-and-forget; the
-      subscription row IS the opt-in, no prefs lookup needed cross-device).
+      teammate-cheer/SOS/rally invoke send-push fire-and-forget).
       Push toggle reconciles against real subscription state on load (a
       default-ON toggle with no subscription lies — fixed).
+      Preference gating (step 3): `send-push` now reads `notification_prefs`
+      server-side and drops recipients whose `channels.push` is off or whose
+      tag→toggle is off. Tag→toggle map lives in `send-push/index.ts` and
+      MIRRORS `ROLE_TOGGLE_DEFS` in `src/lib/notificationPreferences.ts` —
+      keep the two in sync when adding a toggle. Missing prefs row = allowed
+      (never silently mutes an undiscovered user).
       OPEN HARDENING: `send-push` accepts any authenticated caller — add JWT
       role checks + rate limiting before public launch; push copy is
       English-only (localize via profiles.locale in function later).
-- [ ] **Steps 3–4 (open): triggers + email.** Design notes: notify the
-      SUPPORTER about streaks (bidirectional — freebrainer/brainlover, never
-      age-assumed); payloads carry zero health content; quiet hours
-      21:00–08:00 device-local; child's noisy channels default off. Needs:
-      Resend API key as Supabase secret (auth mail already flows through the
-      account — same vendor, new key).
+- [x] **Step 3 (shipped): triggers.** Server-side scheduling so sends fire
+      with the phone closed — Web Push alone cannot (needs a signed-in client).
+      `notification_prefs` (migration 53) is the server-readable toggle store;
+      the client mirrors localStorage to it via `notificationPrefsSync`
+      (hydrate on mount, fire-and-forget upsert on every change; timezone
+      captured only when the editor owns the row). `DashboardLayout` also
+      calls `syncNotificationMeta` on load so role+timezone exist even if the
+      user never opens settings. Migration 54 adds
+      `virtual_sessions.reminder_sent_at`, a `notification_deliveries` dedupe
+      ledger, and a pg_cron job (every 5 min → pg_net → Edge Function
+      `send-scheduled-notifications`). Three jobs: **session T-15** (≤15 min
+      before a session, both people, `sessionReminders`), **morning nudge**
+      (08:00–10:00 local, freebrainer not checked in, `checkinReminders`),
+      **streak-at-risk** (17:00–20:00 local, freebrainer moved yesterday but
+      not today → linked supporters, `freebrainerStreaks`). Quiet hours
+      21:00–08:00 recipient-local; delivery deduped per (kind, recipient,
+      local-day). Test mode is behind the `FB_NOTIFY_TEST_TOKEN` secret
+      (`x-fb-test-token` header) and DISABLED when unset.
+      DEPLOY ORDER: function before migration 54. Cron sends the public anon
+      key (idempotent per-day, so worst case is the normal daily send);
+      add a shared secret before public launch.
+- [ ] **Step 4 (open): email.** Needs Resend API key as a Supabase secret
+      (auth mail already flows through the account — same vendor, new key).
+      `notification_prefs.channels.email` already exists (default OFF) and is
+      the switch; the pure-prefs half of step 4 shipped early inside step 3.
+
+### Reciprocity (deferred — deliberately unbuilt)
+
+"Reciprocity" was listed as a step-3 item but is UNDEFINED in the product:
+there are zero code/docs/locale hits for it. Do NOT invent behavior. Recorded
+here so the eventual definition has a home.
+
+What it most likely means: a two-way encouragement loop — the FreeBrainer's
+own movement triggers a thank-you/acknowledgement back to the supporter who
+cheered/poked/rallied, so the relationship is mutual rather than one-way.
+Candidate shape (all speculation until product confirms):
+
+- **Trigger:** a supporter (caregiver) interacts (poke/cheer/video/rally) and
+  the FreeBrainer then completes a check-in.
+- **Send:** one gentle "your nudge helped — they moved today" push/event to
+  that supporter, deduped per (support, day).
+- **Pieces that already exist and could be reused:** `brainloverInteractions.ts`
+  (records pokes/cheers), `pushNotify.ts` (`notifyPush` + copy builders),
+  `send-push` (delivery + `notification_prefs` gating), `caregiver_links`
+  (who supports whom), `daily_checkins` (did they move).
+- **Open questions to resolve before building:** Is it a push or in-app only?
+  Which toggle gates it (no key exists today — needs a new `ROLE_TOGGLE_DEFS`
+  entry + locale strings in all 5 files)? Does it reveal health data to the
+  supporter (it must NOT — payloads stay health-free)? Supporter-local quiet
+  hours vs FreeBrainer-local? Rate-limit so a supporter isn't pinged for every
+  single check-in?
+
+If/when defined, implement it as another job in
+`send-scheduled-notifications` (or an event hook in `pushNotify`) rather than a
+new parallel pipeline, and add its toggle key to the `send-push`
+tag→toggle map.
 
 ## Test-data hygiene (dev only)
 

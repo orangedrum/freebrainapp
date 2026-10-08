@@ -6,7 +6,8 @@
 //   "title": string,                              // notification title
 //   "body"?: string, "url"?: string,              // url deep-links on tap (default "/")
 //   "tag"?: string,                               // groups/replaces same-tag notifications
-//   "badgeCount"?: number                         // app-icon badge (omit = untouched)
+//   "badgeCount"?: number,                        // app-icon badge (omit = untouched)
+//   "toggle"?: string                             // explicit pref toggle key; else derived from tag+role
 // }
 //
 // Reads push_subscriptions with the service_role key, sends via Web Push,
@@ -40,6 +41,32 @@ interface SendPushBody {
   url?: string;
   tag?: string;
   badgeCount?: number;
+  toggle?: string;
+}
+
+// ── tag → pref toggle key, per recipient role ──────────────────
+// Mirrors ROLE_TOGGLE_DEFS in src/lib/notificationPreferences.ts. A tag with
+// no mapping for a role (or a recipient with no prefs row) is NOT gated.
+// "caregiver" is the DB role for what the UI calls "brainlover".
+const TAG_TOGGLE_BY_ROLE: Record<string, Record<string, string>> = {
+  poke: { freebrainer: "pokes" },
+  cheer: { freebrainer: "cheers", brainlover: "cheers" },
+  video: { freebrainer: "videoRecommendations" },
+  sos: { freebrainer: "teamRallies", brainlover: "freebrainerSOS", pro: "freebrainerSOS" },
+  rally: { freebrainer: "teamRallies", brainlover: "teamRallies", pro: "teamRallies" },
+  "streak-risk": { brainlover: "freebrainerStreaks", pro: "freebrainerStreaks" },
+  morning: { freebrainer: "checkinReminders" },
+  "session-t15": { freebrainer: "sessionReminders", brainlover: "sessionReminders", pro: "sessionReminders" },
+};
+
+function normalizeRole(role: string | null | undefined): string {
+  return role === "caregiver" ? "brainlover" : (role || "");
+}
+
+function toggleKeyFor(tag: string | undefined, role: string | null | undefined, explicit?: string): string | null {
+  if (explicit) return explicit;
+  if (!tag) return null;
+  return TAG_TOGGLE_BY_ROLE[tag]?.[normalizeRole(role)] || null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -73,13 +100,36 @@ Deno.serve(async (req: Request) => {
     );
     const { data: subs, error: subsErr } = await supabase
       .from("push_subscriptions")
-      .select("endpoint, p256dh, auth")
+      .select("user_id, endpoint, p256dh, auth")
       .in("user_id", userIds);
     if (subsErr) {
       return Response.json({ error: subsErr.message }, { status: 500, headers: corsHeaders });
     }
     if (!subs || subs.length === 0) {
-      return Response.json({ sent: 0, pruned: 0, failed: 0, note: "no subscriptions" }, { headers: corsHeaders });
+      return Response.json({ sent: 0, pruned: 0, failed: 0, filtered: 0, note: "no subscriptions" }, { headers: corsHeaders });
+    }
+
+    // Honor the recipient's stored preferences (toggles on ANOTHER device are
+    // invisible to the sender, so gating must happen here). A missing row =
+    // all defaults ON, so undiscovered users are never silently muted.
+    let filtered = 0;
+    const { data: prefsRows } = await supabase
+      .from("notification_prefs")
+      .select("user_id, role, channels, toggles")
+      .in("user_id", userIds);
+    const prefsByUser = new Map<string, any>();
+    for (const row of (prefsRows as any[]) || []) prefsByUser.set(row.user_id, row);
+
+    const allowedSubs = (subs as any[]).filter((sub) => {
+      const prefs = prefsByUser.get(sub.user_id);
+      if (!prefs) return true;
+      if (prefs.channels && prefs.channels.push === false) { filtered++; return false; }
+      const key = toggleKeyFor(payload.tag, prefs.role, payload.toggle);
+      if (key && prefs.toggles && prefs.toggles[key] === false) { filtered++; return false; }
+      return true;
+    });
+    if (allowedSubs.length === 0) {
+      return Response.json({ sent: 0, pruned: 0, failed: 0, filtered, note: "all recipients filtered by prefs" }, { headers: corsHeaders });
     }
 
     const pushBody = JSON.stringify({
@@ -95,7 +145,7 @@ Deno.serve(async (req: Request) => {
     let sampleError: string | null = null;
     const deadEndpoints: string[] = [];
     await Promise.all(
-      (subs as any[]).map(async (sub) => {
+      (allowedSubs as any[]).map(async (sub) => {
         try {
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } } as any,
@@ -123,7 +173,7 @@ Deno.serve(async (req: Request) => {
       await supabase.from("push_subscriptions").delete().in("endpoint", deadEndpoints);
     }
     return Response.json(
-      { sent, pruned: deadEndpoints.length, failed, sampleError },
+      { sent, pruned: deadEndpoints.length, failed, filtered, sampleError },
       { headers: corsHeaders }
     );
   } catch (e: any) {

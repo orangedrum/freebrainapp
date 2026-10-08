@@ -1250,7 +1250,7 @@
     "channelEmail": "Correo Electrónico",
     "channelEmailDesc": "Alertas enviadas a tu correo electrónico",
     "granularSection": "Sobre Qué Recibes Notificaciones",
-    "privacyNote": "Tus preferencias de notificación se almacenan solo en este dispositivo y no se sincronizan entre dispositivos.",
+    "privacyNote": "Tus preferencias de notificación se sincronizan entre tus dispositivos para que las alertas correctas te lleguen donde sea que te registres. No contienen datos de salud.",
     "pushFailed": "No se pudo activar push",
     "pushFailedDesc": "Permiso denegado o este navegador no recibe pushes. Las notificaciones en la app siguen funcionando.",
     "toggles": {

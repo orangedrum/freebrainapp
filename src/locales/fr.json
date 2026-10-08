@@ -1188,7 +1188,7 @@
     "channelEmail": "E-mail",
     "channelEmailDesc": "Alertes envoyées à votre adresse e-mail",
     "granularSection": "Sur Quoi Vous Êtes Notifié",
-    "privacyNote": "Vos préférences de notification sont stockées uniquement sur cet appareil et ne se synchronisent pas entre les appareils.",
+    "privacyNote": "Vos préférences de notification sont synchronisées entre vos appareils afin que les bonnes alertes vous parviennent où que vous pointiez. Elles ne contiennent aucune donnée de santé.",
     "pushFailed": "Push non activé",
     "pushFailedDesc": "Permission refusée ou navigateur incompatible. Les notifications dans l'app fonctionnent toujours.",
     "toggles": {

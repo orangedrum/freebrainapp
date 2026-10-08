@@ -1188,7 +1188,7 @@
     "channelEmail": "E-mail",
     "channelEmailDesc": "Alertas enviados para seu endereço de e-mail",
     "granularSection": "Sobre o Que Você é Notificado",
-    "privacyNote": "Suas preferências de notificação são armazenadas apenas neste dispositivo e não sincronizam entre dispositivos.",
+    "privacyNote": "Suas preferências de notificação são sincronizadas entre seus dispositivos para que os alertas certos cheguem onde você fizer o check-in. Elas não contêm dados de saúde.",
     "pushFailed": "Não foi possível ativar push",
     "pushFailedDesc": "Permissão negada ou navegador incompatível. Notificações no app continuam funcionando.",
     "toggles": {

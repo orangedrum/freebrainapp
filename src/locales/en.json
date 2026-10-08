@@ -1225,7 +1225,7 @@
     "channelEmail": "Email",
     "channelEmailDesc": "Alerts sent to your email address",
     "granularSection": "What You're Notified About",
-    "privacyNote": "Your notification preferences are stored on this device only and do not sync across devices.",
+    "privacyNote": "Your notification preferences sync across your devices so the right alerts reach you wherever you check in. They contain no health data.",
     "pushFailed": "Couldn't enable push",
     "pushFailedDesc": "Permission was denied or this browser can't receive pushes. In-app notifications still work.",
     "toggles": {

@@ -17,12 +17,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
-  getNotificationPrefs,
   setNotificationPrefs,
   ROLE_TOGGLE_DEFS,
   type NotificationPrefs,
   type NotificationChannel,
 } from "@/lib/notificationPreferences";
+import { hydrateNotificationPrefs, persistNotificationPrefs } from "@/lib/notificationPrefsSync";
 import { subscribePush, unsubscribePush, getPushState } from "@/lib/pushSubscriptions";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,26 +37,33 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
 
-  // Load prefs on mount (and when user/role changes). A push toggle stuck
-  // ON with no real subscription lies (nothing can arrive) — reconcile it
-  // against the browser's actual subscription state exactly once per load.
+  // Load prefs on mount (and when user/role changes). The server row (if any)
+  // is merged in first so a toggle set on another device is honored. A push
+  // toggle stuck ON with no real subscription lies (nothing can arrive) —
+  // reconcile it against the browser's actual subscription state once per load.
   useEffect(() => {
     if (!userId) return;
-    const stored = getNotificationPrefs(userId, role);
-    setPrefs(stored);
-    if (stored.channels.push) {
-      getPushState().then((state) => {
-        if (state !== "subscribed") {
-          setPrefs((prev) => {
-            if (!prev || !prev.channels.push) return prev;
-            const next = { ...prev, channels: { ...prev.channels, push: false } };
-            setNotificationPrefs(userId, next);
-            return next;
-          });
-        }
-      }).catch(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+    (async () => {
+      const stored = await hydrateNotificationPrefs(userId, role);
+      if (cancelled) return;
+      setPrefs(stored);
+      if (!stored.channels.push) return;
+      try {
+        const state = await getPushState();
+        if (state === "subscribed" || cancelled) return;
+        setPrefs((prev) => {
+          if (!prev || !prev.channels.push) return prev;
+          const next = { ...prev, channels: { ...prev.channels, push: false } };
+          setNotificationPrefs(userId, next);
+          void persistNotificationPrefs(userId, role, next);
+          return next;
+        });
+      } catch {
+        /* push state unavailable — leave the stored value */
+      }
+    })();
+    return () => { cancelled = true; };
   }, [userId, role]);
 
   // Persist whenever prefs change (but not on first null state)
@@ -64,8 +71,9 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     (next: NotificationPrefs) => {
       setPrefs(next);
       setNotificationPrefs(userId, next);
+      void persistNotificationPrefs(userId, role, next);
     },
-    [userId]
+    [userId, role]
   );
 
   const toggleChannel = async (channel: NotificationChannel, value: boolean) => {

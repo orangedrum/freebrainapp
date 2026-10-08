@@ -21,6 +21,7 @@ export interface PushContent {
   body: string;
   url?: string;
   tag?: string;
+  badgeCount?: number;
 }
 
 function isPushableId(id: string | null | undefined): id is string {
@@ -53,6 +54,7 @@ export async function notifyPush(userIds: (string | null | undefined)[], content
         body: content.body.slice(0, 120),
         url: content.url || "/support",
         tag: content.tag,
+        badgeCount: content.badgeCount,
       }),
     });
     const text = await res.text().catch(() => "");
@@ -61,7 +63,7 @@ export async function notifyPush(userIds: (string | null | undefined)[], content
     } else {
       try {
         const data = JSON.parse(text);
-        console.log("[FB-DEBUG] notifyPush delivered:", JSON.stringify({ to: targets.length, sent: data?.sent ?? null, pruned: data?.pruned ?? null, failed: data?.failed ?? null, sampleError: data?.sampleError ?? null, tag: content.tag }));
+        console.log("[FB-DEBUG] notifyPush delivered:", JSON.stringify({ to: targets.length, sent: data?.sent ?? null, pruned: data?.pruned ?? null, failed: data?.failed ?? null, filtered: data?.filtered ?? null, sampleError: data?.sampleError ?? null, tag: content.tag }));
       } catch {
         console.log("[FB-DEBUG] notifyPush delivered (unparsed response).");
       }
@@ -94,4 +96,37 @@ export function sosPush(authorName: string): PushContent {
 export function rallyPush(authorName: string): PushContent {
   const name = authorName || "Someone";
   return { title: "FreeBrain", body: `🚀 ${name} rallied the team to move!`, url: "/community", tag: "rally" };
+}
+
+/**
+ * Scheduled copy builders (step 3) — health-free by design: no streak counts,
+ * no symptom words, no clinical content. The SW renders these on a lock screen.
+ */
+export function streakRiskPush(freebrainerName: string): PushContent {
+  const name = freebrainerName || "Your FreeBrainer";
+  return {
+    title: "FreeBrain",
+    body: `🌱 ${name} hasn't moved yet today — a quick word from you could keep the streak alive.`,
+    url: "/",
+    tag: "streak-risk",
+    badgeCount: 1,
+  };
+}
+
+export function morningNudgePush(): PushContent {
+  return {
+    title: "FreeBrain",
+    body: "☀️ Good morning! A few minutes of movement sets up the whole day.",
+    url: "/",
+    tag: "morning",
+  };
+}
+
+export function sessionT15Push(): PushContent {
+  return {
+    title: "FreeBrain",
+    body: "⏰ Your session starts in 15 minutes — tap to get ready.",
+    url: "/",
+    tag: "session-t15",
+  };
 }

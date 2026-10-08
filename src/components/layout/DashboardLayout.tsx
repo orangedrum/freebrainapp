@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { changeLanguage, getCurrentLanguage } from "@/lib/language";
+import { syncNotificationMeta } from "@/lib/notificationPrefsSync";
 import { useLoveInteractions } from "@/features/freebrainer/useLoveInteractions";
 import { FB_BUILD_ID } from "@/lib/buildInfo";
 import { useBrainLoverEmptyState } from "@/features/brainlover/emptyStateFlag";
@@ -26,6 +27,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     i18n.on("languageChanged", handler);
     return () => i18n.off("languageChanged", handler);
   }, []);
+
+  // Keep the server-side prefs row (role + device timezone) fresh so the
+  // scheduled push jobs can respect local time even if the user never opens
+  // the notification settings screen. Fire-and-forget; never blocks render.
+  useEffect(() => {
+    if (user?.id && userRole) void syncNotificationMeta(user.id, userRole);
+  }, [user?.id, userRole]);
 
 
   const isPro = userRole === 'pro';
