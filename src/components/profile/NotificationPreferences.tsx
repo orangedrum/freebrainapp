@@ -24,6 +24,7 @@ import {
 } from "@/lib/notificationPreferences";
 import { hydrateNotificationPrefs, persistNotificationPrefs } from "@/lib/notificationPrefsSync";
 import { subscribePush, unsubscribePush, getPushState } from "@/lib/pushSubscriptions";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface NotificationPreferencesProps {
@@ -34,13 +35,21 @@ interface NotificationPreferencesProps {
 export const NotificationPreferences: React.FC<NotificationPreferencesProps> = ({ userId, role }) => {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
+  // A supporter can open their FreeBrainer's preferences (proxy editing). Push
+  // is a DEVICE setting: it must only be reconciled against the owner's own
+  // browser. Checking it on the supporter's device would wrongly flip the
+  // FreeBrainer's push off (and could subscribe the supporter's device as the
+  // FreeBrainer). Only touch device push state when the editor owns the row.
+  const isSelf = !!user?.id && user.id === userId;
 
   // Load prefs on mount (and when user/role changes). The server row (if any)
   // is merged in first so a toggle set on another device is honored. A push
   // toggle stuck ON with no real subscription lies (nothing can arrive) —
-  // reconcile it against the browser's actual subscription state once per load.
+  // reconcile it against the browser's actual subscription state once per load,
+  // but ONLY for the owner's own device.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -48,7 +57,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
       const stored = await hydrateNotificationPrefs(userId, role);
       if (cancelled) return;
       setPrefs(stored);
-      if (!stored.channels.push) return;
+      if (!isSelf || !stored.channels.push) return;
       try {
         const state = await getPushState();
         if (state === "subscribed" || cancelled) return;
@@ -64,7 +73,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
       }
     })();
     return () => { cancelled = true; };
-  }, [userId, role]);
+  }, [userId, role, isSelf]);
 
   // Persist whenever prefs change (but not on first null state)
   const updatePrefs = useCallback(
@@ -80,8 +89,10 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     if (!prefs) return;
     // Push ON means a real browser subscription (permission + VAPID +
     // push_subscriptions row). If that fails (denied/unsupported), leave the
-    // toggle OFF and say why instead of a dead toggle.
-    if (channel === "push") {
+    // toggle OFF and say why instead of a dead toggle. ONLY for the owner:
+    // a supporter editing a FreeBrainer's prefs must not subscribe their own
+    // device as the FreeBrainer.
+    if (channel === "push" && isSelf) {
       if (value) {
         setPushBusy(true);
         try {

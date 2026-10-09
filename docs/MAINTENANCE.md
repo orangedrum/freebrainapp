@@ -142,6 +142,75 @@ If/when defined, implement it as another job in
 new parallel pipeline, and add its toggle key to the `send-push`
 tag→toggle map.
 
+### Scheduled-notifications runbook (re-verify anytime)
+
+Test push end-to-end without waiting for a time window. Project:
+`omcbwbhtjrozbgvzqdya.supabase.co` (anon key = the one in `src/lib/supabase.ts`).
+
+1. Confirm cron is registered + firing (SQL Editor):
+   ```sql
+   select jobname, schedule, active from cron.job where jobname='fb-scheduled-notifications';
+   select status, return_message, start_time from cron.job_run_details order by start_time desc limit 10;
+   ```
+2. Make the FreeBrainer "moved yesterday, not today" so streak + morning match:
+   ```sql
+   delete from daily_checkins where user_id='<FB_UID>' and checkin_date=current_date;
+   insert into daily_checkins (user_id, checkin_date, moved, checkin_status)
+   values ('<FB_UID>', current_date - 1, true, 'moved')
+   on conflict do nothing;
+   select caregiver_id, patient_id from caregiver_links;       -- supporter link must exist
+   select user_id, count(*) from push_subscriptions group by user_id;  -- both people must subscribe
+   ```
+3. Force-run the scheduler (secret `FB_NOTIFY_TEST_TOKEN`, header `x-fb-test-token`):
+   ```sql
+   select net.http_post(
+     url := 'https://omcbwbhtjrozbgvzqdya.supabase.co/functions/v1/send-scheduled-notifications',
+     headers := jsonb_build_object(
+       'Content-Type','application/json',
+       'apikey','<ANON_KEY>', 'Authorization','Bearer <ANON_KEY>',
+       'x-fb-test-token','<FB_NOTIFY_TEST_TOKEN>'
+     ),
+     body := '{}'::jsonb
+   ) as request_id;
+   select status_code, content, error_msg from net._http_response order by created desc limit 3;
+   ```
+   Expected `{"ok":true,"force":true,...}`. Force ignores windows, quiet hours
+   and dedupe; `notification_deliveries` stays empty (by design) so you can
+   re-run freely. Force does NOT stamp `virtual_sessions.reminder_sent_at`.
+4. Delivery count for a single send (proves gating too — expect `sent:1,
+   filtered:0` when the relevant toggle is ON, and `sent:0, filtered:1` when OFF):
+   ```sql
+   select net.http_post(
+     url := 'https://omcbwbhtjrozbgvzqdya.supabase.co/functions/v1/send-push',
+     headers := jsonb_build_object(
+       'Content-Type','application/json',
+       'apikey','<ANON_KEY>', 'Authorization','Bearer <ANON_KEY>'
+     ),
+     body := jsonb_build_object('user_id','<FB_UID>','title','FreeBrain',
+       'body','Delivery check','tag','poke','toggle','pokes')
+   ) as request_id;
+   ```
+   Then `select status_code, content from net._http_response order by created desc limit 1;`
+   (`filtered` counts recipients whose prefs blocked the send.)
+
+### Known bug (fixed in code, ship pending): supporter clobbers FreeBrainer's push setting
+
+- **Symptom:** FreeBrainer enables push on their own profile; when the
+  BrainLover opens the FreeBrainer's profile → Notifications, the push toggle
+  shows OFF — and that OFF gets written to the DB.
+- **Cause (2026-10-09):** `NotificationPreferences` is shared across roles and
+  ran its device-push reconcile (`getPushState()`) against the **viewer's**
+  browser. For a supporter viewing a patient's row that read "subscribed? no"
+  → flip to false and persist. It also let a supporter's device subscribe *as*
+  the FreeBrainer.
+- **Fix:** `NotificationPreferences` now compares `userId` to the signed-in
+  user (`useAuth`). Only the true owner reconciles push against their browser
+  and can toggle the push subscription; proxy editors only edit the stored
+  preference (timezone was already owner-only).
+- **To re-open the table to verify after this ships:** `select user_id, channels,
+  toggles, timezone from notification_prefs;` — a FreeBrainer's row should keep
+  `channels.push: true` after the BrainLover views their profile.
+
 ## Test-data hygiene (dev only)
 
 - Deleting `auth.users` orphans `public.*` rows (profiles, roles, links,
