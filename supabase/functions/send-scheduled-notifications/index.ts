@@ -52,17 +52,20 @@ function inQuietHours(tz: string, at: Date): boolean {
 }
 
 // ── delivery helpers ───────────────────────────────────────────
-async function sendPush(userIds: string[], body: { title: string; body: string; url?: string; tag?: string; toggle?: string; badgeCount?: number }) {
+async function sendPush(userIds: string[], body: { title: string; body: string; url?: string; tag?: string; toggle?: string; badgeCount?: number }): Promise<{ sent: number; filtered: number }> {
   const targets = [...new Set(userIds.filter(Boolean))];
-  if (targets.length === 0) return;
+  if (targets.length === 0) return { sent: 0, filtered: 0 };
   try {
-    await fetch(SEND_PUSH_URL, {
+    const res = await fetch(SEND_PUSH_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
       body: JSON.stringify({ user_ids: targets, ...body }),
     });
+    const json = (await res.json().catch(() => ({}))) as { sent?: number; filtered?: number };
+    return { sent: json.sent ?? 0, filtered: json.filtered ?? 0 };
   } catch (e) {
     console.warn("[sched] send-push call failed:", e);
+    return { sent: 0, filtered: 0 };
   }
 }
 
@@ -94,11 +97,12 @@ async function jobSessionT15(force: boolean) {
   const in15 = new Date(now.getTime() + 15 * 60 * 1000);
   let query = sb.from("virtual_sessions")
     .select("id, freebrainer_email, brainlover_email, session_start")
-    .eq("status", "upcoming").is("reminder_sent_at", null);
+    .eq("status", "upcoming").is("reminder_sent_at", null)
+    .order("session_start", { ascending: true });
   query = force ? query : query.gte("session_start", now.toISOString()).lte("session_start", in15.toISOString());
   const { data: sessions, error } = await query.limit(50);
-  if (error) { console.warn("[sched] sessions query:", error.message); return; }
-  if (!sessions || sessions.length === 0) return;
+  if (error) { console.warn("[sched] sessions query:", error.message); return null; }
+  if (!sessions || sessions.length === 0) return null;
 
   const emails = [...new Set(sessions.flatMap((s: any) => [s.freebrainer_email, s.brainlover_email]).filter(Boolean).map((e: string) => e.toLowerCase()))];
   const { data: profiles } = await sb.from("profiles").select("user_id, email").in("email", emails);
@@ -110,26 +114,30 @@ async function jobSessionT15(force: boolean) {
   for (const p of (prefRows as any[]) || []) if (p.timezone) tzByUser.set(p.user_id, p.timezone);
 
   const processedIds: string[] = [];
+  const out = { sent: 0, filtered: 0 };
   for (const s of sessions as any[]) {
     const recipients = [byEmail.get(String(s.freebrainer_email).toLowerCase()), byEmail.get(String(s.brainlover_email).toLowerCase())]
       .filter(Boolean)
       .filter((uid) => force || !(tzByUser.get(uid) && inQuietHours(tzByUser.get(uid)!, now)));
-    await sendPush(recipients as string[], {
+    const r = await sendPush(recipients as string[], {
       title: "FreeBrain",
       body: "⏰ Your session starts in 15 minutes — tap to get ready.",
       url: "/", tag: "session-t15", toggle: "sessionReminders",
     });
+    out.sent += r.sent;
+    out.filtered += r.filtered;
     processedIds.push(s.id);
   }
   if (!force && processedIds.length > 0) {
     await sb.from("virtual_sessions").update({ reminder_sent_at: now.toISOString() }).in("id", processedIds);
   }
+  return out;
 }
 
 // ── job 2: morning check-in nudge ──────────────────────────────
 async function jobMorning(force: boolean, now: Date) {
   const { data: prefs, error } = await sb.from("notification_prefs").select("user_id, role, timezone");
-  if (error) { console.warn("[sched] prefs query:", error.message); return; }
+  if (error) { console.warn("[sched] prefs query:", error.message); return null; }
   const rows = ((prefs as any[]) || []).filter((p) => p.timezone);
   const roles = await roleMap(rows.map((p) => p.user_id));
 
@@ -139,30 +147,34 @@ async function jobMorning(force: boolean, now: Date) {
     const { hour } = localParts(p.timezone, now);
     return force || (hour >= 8 && hour < 10);
   });
-  if (inWindow.length === 0) return;
+  if (inWindow.length === 0) return null;
 
   const ids = inWindow.map((p) => p.user_id);
   const since = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const { data: checkins } = await sb.from("daily_checkins").select("user_id, checkin_date").in("user_id", ids).gte("checkin_date", since);
   const done = new Set(((checkins as any[]) || []).map((c) => `${c.user_id}|${c.checkin_date}`));
 
+  const out = { sent: 0, filtered: 0 };
   for (const p of inWindow) {
     const today = localParts(p.timezone, now).date;
     if (done.has(`${p.user_id}|${today}`)) continue;
     if (!(await claim("morning", p.user_id, today, force))) continue;
-    await sendPush([p.user_id], {
+    const r = await sendPush([p.user_id], {
       title: "FreeBrain",
       body: "☀️ Good morning! A few minutes of movement sets up the whole day.",
       url: "/", tag: "morning", toggle: "checkinReminders",
     });
+    out.sent += r.sent;
+    out.filtered += r.filtered;
   }
+  return out;
 }
 
 // ── job 3: streak at risk → supporters ─────────────────────────
 async function jobStreakRisk(force: boolean, now: Date) {
   const since = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const { data: checkins, error } = await sb.from("daily_checkins").select("user_id, checkin_date").gte("checkin_date", since);
-  if (error) { console.warn("[sched] checkins query:", error.message); return; }
+  if (error) { console.warn("[sched] checkins query:", error.message); return null; }
   const byUser = new Map<string, Set<string>>();
   for (const c of (checkins as any[]) || []) {
     if (!byUser.has(c.user_id)) byUser.set(c.user_id, new Set());
@@ -182,7 +194,7 @@ async function jobStreakRisk(force: boolean, now: Date) {
     const yesterday = prevDate(today);
     if (dates.has(yesterday) && !dates.has(today)) atRisk.push({ userId, tz });
   }
-  if (atRisk.length === 0) return;
+  if (atRisk.length === 0) return null;
 
   const patients = atRisk.map((r) => r.userId);
   const { data: links } = await sb.from("caregiver_links").select("caregiver_id, patient_id").in("patient_id", patients);
@@ -191,6 +203,7 @@ async function jobStreakRisk(force: boolean, now: Date) {
   for (const n of (names as any[]) || []) if (n.display_name) nameByUser.set(n.user_id, n.display_name);
   const tzByPatient = new Map(atRisk.map((r) => [r.userId, r.tz]));
 
+  const out = { sent: 0, filtered: 0 };
   for (const link of (links as any[]) || []) {
     const tz = tzByUser.get(link.caregiver_id) || tzByPatient.get(link.patient_id);
     if (!tz) continue;
@@ -199,12 +212,15 @@ async function jobStreakRisk(force: boolean, now: Date) {
     const today = localParts(tz, now).date;
     if (!(await claim("streak-risk", link.caregiver_id, today, force))) continue;
     const name = nameByUser.get(link.patient_id) || "Your FreeBrainer";
-    await sendPush([link.caregiver_id], {
+    const r = await sendPush([link.caregiver_id], {
       title: "FreeBrain",
       body: `🌱 ${name} hasn't moved yet today — a quick word from you could keep the streak alive.`,
       url: "/", tag: "streak-risk", toggle: "freebrainerStreaks", badgeCount: 1,
     });
+    out.sent += r.sent;
+    out.filtered += r.filtered;
   }
+  return out;
 }
 
 Deno.serve(async (req: Request) => {
@@ -226,10 +242,12 @@ Deno.serve(async (req: Request) => {
   const now = new Date();
 
   try {
-    await jobSessionT15(force);
-    await jobMorning(force, now);
-    await jobStreakRisk(force, now);
-    return Response.json({ ok: true, force, ranAt: now.toISOString() }, { headers: corsHeaders });
+    const jobs: Record<string, { sent: number; filtered: number } | null> = {
+      sessionT15: await jobSessionT15(force),
+      morning: await jobMorning(force, now),
+      streakRisk: await jobStreakRisk(force, now),
+    };
+    return Response.json({ ok: true, force, ranAt: now.toISOString(), jobs }, { headers: corsHeaders });
   } catch (e: any) {
     return Response.json({ error: e?.message || "unknown" }, { status: 500, headers: corsHeaders });
   }

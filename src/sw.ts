@@ -59,8 +59,8 @@ self.addEventListener("push", (event: PushEvent) => {
       } catch {
         /* badging unsupported — notification still shows */
       }
-      // NotificationOptions in this TS lib lacks `vibrate` — extend locally.
-      const options: NotificationOptions & { vibrate?: number[] } = {
+      // NotificationOptions in this TS lib lacks `vibrate`/`renotify` — extend locally.
+      const options: NotificationOptions & { vibrate?: number[]; renotify?: boolean } = {
         body: data.body || "",
         icon: "/icon-192.png",
         badge: "/icon-192.png",
@@ -70,6 +70,11 @@ self.addEventListener("push", (event: PushEvent) => {
         vibrate: [200, 100, 200],
         tag: data.tag,
         data: { url },
+        // The whole point is to get the user back INTO the app: keep the
+        // banner pinned (requireInteraction) instead of letting the OS
+        // auto-dismiss it, and re-alert when a newer push shares a tag.
+        requireInteraction: true,
+        renotify: true,
       };
       await self.registration.showNotification(data.title || "FreeBrain", options);
     })()
