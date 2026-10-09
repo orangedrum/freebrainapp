@@ -2,11 +2,13 @@
 // send-scheduled-notifications → Supabase Edge Function (step 3)
 //
 // Triggered every 5 minutes by pg_cron (migration 54) via pg_net. Computes
-// three time-of-day jobs and hands delivery off to send-push (single choke
+// four time-of-day jobs and hands delivery off to send-push (single choke
 // point) — this function never touches web-push/VAPID itself.
 //
 //   • session-t15 — a virtual session starts in ≤15 min → remind both people
 //   • morning     — a FreeBrainer hasn't checked in yet, 08:00–10:00 local
+//   • checkin-nudge — a FreeBrainer hasn't checked in today, from 11:00 local
+//                   → nudge their linked supporters (freebrainerCheckins)
 //   • streak-risk — a FreeBrainer moved yesterday but not today, 17:00–20:00
 //                   local → gentle nudge to their linked supporters
 //
@@ -170,11 +172,20 @@ async function jobMorning(force: boolean, now: Date) {
   return out;
 }
 
-// ── job 3: streak at risk → supporters ─────────────────────────
-async function jobStreakRisk(force: boolean, now: Date) {
+// ── supporter nudges → caregivers of at-risk FreeBrainers ──────
+async function nudgeCaregivers(
+  force: boolean,
+  now: Date,
+  opts: {
+    kind: string; tag: string; toggle: string;
+    minHour: number; maxHour: number;
+    gate: (dates: Set<string>, tz: string, at: Date) => boolean;
+    bodyFor: (name: string) => string;
+    extra?: Record<string, unknown>;
+  }
+): Promise<{ sent: number; filtered: number } | null> {
   const since = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const { data: checkins, error } = await sb.from("daily_checkins").select("user_id, checkin_date").gte("checkin_date", since);
-  if (error) { console.warn("[sched] checkins query:", error.message); return null; }
+  const { data: checkins } = await sb.from("daily_checkins").select("user_id, checkin_date").gte("checkin_date", since);
   const byUser = new Map<string, Set<string>>();
   for (const c of (checkins as any[]) || []) {
     if (!byUser.has(c.user_id)) byUser.set(c.user_id, new Set());
@@ -185,14 +196,10 @@ async function jobStreakRisk(force: boolean, now: Date) {
   const tzByUser = new Map<string, string>();
   for (const p of (prefs as any[]) || []) if (p.timezone) tzByUser.set(p.user_id, p.timezone);
 
-  // FreeBrainers who moved yesterday (local) and not today (local).
   const atRisk: { userId: string; tz: string }[] = [];
   for (const [userId, dates] of byUser) {
     const tz = tzByUser.get(userId);
-    if (!tz) continue;
-    const today = localParts(tz, now).date;
-    const yesterday = prevDate(today);
-    if (dates.has(yesterday) && !dates.has(today)) atRisk.push({ userId, tz });
+    if (tz && opts.gate(dates, tz, now)) atRisk.push({ userId, tz });
   }
   if (atRisk.length === 0) return null;
 
@@ -208,19 +215,44 @@ async function jobStreakRisk(force: boolean, now: Date) {
     const tz = tzByUser.get(link.caregiver_id) || tzByPatient.get(link.patient_id);
     if (!tz) continue;
     const { hour } = localParts(tz, now);
-    if (!force && (hour < 17 || hour >= 20)) continue;
+    if (!force && (hour < opts.minHour || hour >= opts.maxHour)) continue;
     const today = localParts(tz, now).date;
-    if (!(await claim("streak-risk", link.caregiver_id, today, force))) continue;
+    if (!(await claim(opts.kind, link.caregiver_id, today, force))) continue;
     const name = nameByUser.get(link.patient_id) || "Your FreeBrainer";
     const r = await sendPush([link.caregiver_id], {
       title: "FreeBrain",
-      body: `🌱 ${name} hasn't moved yet today — a quick word from you could keep the streak alive.`,
-      url: "/", tag: "streak-risk", toggle: "freebrainerStreaks", badgeCount: 1,
+      body: opts.bodyFor(name),
+      url: "/", tag: opts.tag, toggle: opts.toggle,
+      ...opts.extra,
     });
     out.sent += r.sent;
     out.filtered += r.filtered;
   }
   return out;
+}
+
+// ── job 3: streak at risk (17:00–20:00) → supporters ───────────
+async function jobStreakRisk(force: boolean, now: Date) {
+  return nudgeCaregivers(force, now, {
+    kind: "streak-risk", tag: "streak-risk", toggle: "freebrainerStreaks",
+    minHour: 17, maxHour: 20,
+    gate: (dates, tz, at) => {
+      const today = localParts(tz, at).date;
+      return dates.has(prevDate(today)) && !dates.has(today);
+    },
+    bodyFor: (name) => `🌱 ${name} hasn't moved yet today — a quick word from you could keep the streak alive.`,
+    extra: { badgeCount: 1 },
+  });
+}
+
+// ── job 4: hasn't checked in by 11:00 → supporters ─────────────
+async function jobCheckinNudge(force: boolean, now: Date) {
+  return nudgeCaregivers(force, now, {
+    kind: "checkin-nudge", tag: "checkin-nudge", toggle: "freebrainerCheckins",
+    minHour: 11, maxHour: 17,
+    gate: (dates, tz, at) => !dates.has(localParts(tz, at).date),
+    bodyFor: (name) => `💛 ${name} hasn't checked in yet today — a small nudge from you could keep the streak going.`,
+  });
 }
 
 Deno.serve(async (req: Request) => {
@@ -245,6 +277,7 @@ Deno.serve(async (req: Request) => {
     const jobs: Record<string, { sent: number; filtered: number } | null> = {
       sessionT15: await jobSessionT15(force),
       morning: await jobMorning(force, now),
+      checkinNudge: await jobCheckinNudge(force, now),
       streakRisk: await jobStreakRisk(force, now),
     };
     return Response.json({ ok: true, force, ranAt: now.toISOString(), jobs }, { headers: corsHeaders });

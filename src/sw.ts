@@ -83,7 +83,11 @@ self.addEventListener("push", (event: PushEvent) => {
 
 self.addEventListener("notificationclick", (event: NotificationEvent) => {
   event.notification.close();
-  const url = (event.notification.data as { url?: string } | undefined)?.url || "/";
+  const rawUrl = (event.notification.data as { url?: string } | undefined)?.url || "/";
+  // Absolute URL: navigate()/openWindow() with a bare "/" can resolve against
+  // the wrong base when the tap comes from the lock-screen shade — build it
+  // from the SW origin explicitly so the tap always lands in the app.
+  const target = new URL(rawUrl, self.location.origin).href;
   event.waitUntil(
     (async () => {
       try {
@@ -99,14 +103,14 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
         if (windowClient.url.startsWith(self.location.origin) && "focus" in windowClient) {
           await windowClient.focus();
           try {
-            await windowClient.navigate(url);
+            await windowClient.navigate(target);
           } catch {
             /* cross-origin navigation blocked — focus is enough */
           }
           return;
         }
       }
-      await self.clients.openWindow(url);
+      await self.clients.openWindow(target);
     })()
   );
 });

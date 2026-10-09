@@ -55,6 +55,7 @@ const TAG_TOGGLE_BY_ROLE: Record<string, Record<string, string>> = {
   sos: { freebrainer: "teamRallies", brainlover: "freebrainerSOS", pro: "freebrainerSOS" },
   rally: { freebrainer: "teamRallies", brainlover: "teamRallies", pro: "teamRallies" },
   "streak-risk": { brainlover: "freebrainerStreaks", pro: "freebrainerStreaks" },
+  "checkin-nudge": { brainlover: "freebrainerCheckins", pro: "freebrainerCheckins" },
   morning: { freebrainer: "checkinReminders" },
   "session-t15": { freebrainer: "sessionReminders", brainlover: "sessionReminders", pro: "sessionReminders" },
 };
