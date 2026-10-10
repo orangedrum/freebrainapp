@@ -148,9 +148,14 @@ Deno.serve(async (req: Request) => {
     await Promise.all(
       (allowedSubs as any[]).map(async (sub) => {
         try {
+          // High urgency: wakes dozing Android devices so alerts banner while
+          // the app is closed. Default ("normal") lets the OS defer delivery
+          // until the user wakes the phone — exactly the "only shows when I
+          // open the app" symptom.
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } } as any,
-            pushBody
+            pushBody,
+            { urgency: "high" }
           );
           sent++;
         } catch (e: any) {
