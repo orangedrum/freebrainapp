@@ -142,6 +142,30 @@ If/when defined, implement it as another job in
 new parallel pipeline, and add its toggle key to the `send-push`
 tag→toggle map.
 
+### Enable-notifications prompt after first check-in (tabled — urgent next after delivery stabilizes)
+
+New installs currently never get asked to enable push: subscribing happens
+only via the settings toggle (`subscribePush` is called solely from
+`NotificationPreferences.tsx:99`; login never subscribes). After a reinstall
+the browser keys are gone, so the user silently receives nothing until they
+rediscover the toggle. Fix: an in-app alert on **all new installs,
+immediately after the user's first check-in**, offering to enable
+notifications.
+
+- **Trigger:** first-ever `daily_checkins` row for that user (not every
+  check-in, not onboarding — the user has just experienced value).
+- **Surface:** in-app modal/alert, NOT a push (no subscription can exist yet).
+- **Actions:** Allow → request permission + `subscribePush(userId)` (reuse it;
+  do not duplicate subscription logic); Not now → dismiss, never auto-reprompt.
+  If permission is `denied`, code cannot re-prompt — point to settings once.
+- **Rules:** role-specific copy via props + `t()` (both roles, all 5 locales);
+  no hardcoded colors; must not regress the check-in flow (show after the
+  mystery-box/complete step); one component, shared across roles.
+- **Pairs with:** auto-resubscribe on login when stored prefs already say
+  push:true and permission is already granted (covers reinstalls where the
+  user previously opted in). Implement the prompt first; add auto-resubscribe
+  only after banner delivery is verified, so attribution stays clean.
+
 ### Scheduled-notifications runbook (re-verify anytime)
 
 Test push end-to-end without waiting for a time window. Project:
