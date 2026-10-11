@@ -24,3 +24,18 @@ function computeBuildId(): string {
 }
 
 export const FB_BUILD_ID: string = computeBuildId();
+
+const PROD_HOSTS = new Set(["app.freethebrains.com", "freebrain.app", "www.freebrain.app"]);
+
+/**
+ * True on the production domain. The footer build stamp renders everywhere
+ * else (dev, preview deploys, test builds) and stays out of prod, where it
+ * looks unfinished. Display gate only — same code path everywhere.
+ */
+export function isProdHost(): boolean {
+  try {
+    return PROD_HOSTS.has(window.location.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}

@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { changeLanguage, getCurrentLanguage } from "@/lib/language";
 import { syncNotificationMeta } from "@/lib/notificationPrefsSync";
 import { useLoveInteractions } from "@/features/freebrainer/useLoveInteractions";
-import { FB_BUILD_ID } from "@/lib/buildInfo";
+import { FB_BUILD_ID, isProdHost } from "@/lib/buildInfo";
 import { useBrainLoverEmptyState } from "@/features/brainlover/emptyStateFlag";
 import { useBrainLoverSupportBadge } from "@/features/brainlover/useBrainLoverSupportBadge";
 
@@ -86,10 +86,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <main className={`flex-1 overflow-y-auto overflow-x-hidden ${isOnboarding ? '' : 'p-4 md:p-6'}`}>
         <div className={`mx-auto ${isOnboarding ? 'max-w-full' : 'max-w-5xl'}`}>
           {children}
-          {/* Build stamp: "which build am I on?" answered in plain sight for testers + support. */}
-          <p className="text-center text-[10px] text-muted-foreground/60 pt-6 pb-2">
-            {t("common.buildStamp", "Build {{id}}", { id: FB_BUILD_ID })}
-          </p>
+          {/* Build stamp: "which build am I on?" answered in plain sight for testers + support. Hidden on prod. */}
+          {!isProdHost() && (
+            <p className="text-center text-[10px] text-muted-foreground/60 pt-6 pb-2">
+              {t("common.buildStamp", "Build {{id}}", { id: FB_BUILD_ID })}
+            </p>
+          )}
         </div>
       </main>
 

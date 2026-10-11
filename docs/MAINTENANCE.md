@@ -217,6 +217,16 @@ Test push end-to-end without waiting for a time window. Project:
    Then `select status_code, content from net._http_response order by created desc limit 1;`
    (`filtered` counts recipients whose prefs blocked the send.)
 
+### Delivery verification (2026-10-11 — FreeBrainer set 7/7 PASS)
+
+Direct `send-push` per type (production tag+toggle+copy from
+`pushNotify.ts`), phone locked, fb subs = Android (phone) + macOS (desktop):
+morning, session-t15, poke, cheer, video, sos, rally — every send `sent:2,
+failed:0, filtered:0`; every banner arrived on unlock (one SOS chimed
+pre-unlock with app open). Display per type proven; scheduler job-query halves
+proven separately via force-run `jobs` counts. Supporter-side streak-risk +
+checkin-nudge proven earlier the same way.
+
 ### Known bug (fixed in code, ship pending): supporter clobbers FreeBrainer's push setting
 
 - **Symptom:** FreeBrainer enables push on their own profile; when the
@@ -271,3 +281,15 @@ Test push end-to-end without waiting for a time window. Project:
 - **Recommended-videos flow bug** (reported 2026-09-23 during alerts testing;
   distinct flow from poke/cheer/dismiss). Revisit AFTER alerts (push live +
   dismiss verified) — reporter asked to be reminded at that point.
+- **Video push deep-link gap** (reported 2026-10-11 during 7/7 verification):
+  the video-recommendation push lands on `/support` with no video attached;
+  it should open the video-player step for the specific recommended video
+  (include the video id in the payload/data). Alert piece passes; deep-link
+  pending.
+- **SOS/rally targets the whole team, should target one FreeBrainer**
+  (reported 2026-10-11 during 7/7 verification): alert delivery passes, but
+  rallying must address a specific FreeBrainer, not broadcast. Product rule
+  recorded same day: SOS originates from FreeBrainers, never brainlovers;
+  brainlover-to-brainlover traffic is temporary 24hr messages only when
+  attached to the same FreeBrainer, otherwise no encouragement traffic.
+  Revisit exact functionality after alerts release.
