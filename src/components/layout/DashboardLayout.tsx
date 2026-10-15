@@ -99,6 +99,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               {t("common.buildStamp", "Build {{id}}", { id: FB_BUILD_ID })}
             </p>
           )}
+          {/* TEMP DEBUG: Auto-resubscribe trigger (remove after verification) */}
+          {!isProdHost() && user?.id && userRole === 'freebrainer' && (
+            <button
+              onClick={async () => {
+                try {
+                  const { autoResubscribeIfNeeded } = await import('@/lib/pushSubscriptions');
+                  await autoResubscribeIfNeeded(user.id);
+                  alert('Auto-resubscribe done! Check console for [FB-DEBUG] logs.');
+                } catch (e) {
+                  alert('Error: ' + String(e));
+                }
+              }}
+              className="mt-4 px-3 py-1.5 text-xs bg-amber-100 text-amber-800 rounded border border-amber-300"
+            >
+              🔧 Debug: Trigger Auto-Resubscribe
+            </button>
+          )}
         </div>
       </main>
 
