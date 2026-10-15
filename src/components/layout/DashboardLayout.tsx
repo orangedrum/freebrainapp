@@ -12,6 +12,7 @@ import { changeLanguage, getCurrentLanguage } from "@/lib/language";
 import { syncNotificationMeta } from "@/lib/notificationPrefsSync";
 import { useLoveInteractions } from "@/features/freebrainer/useLoveInteractions";
 import { FB_BUILD_ID, isProdHost } from "@/lib/buildInfo";
+import { autoResubscribeIfNeeded } from "@/lib/pushSubscriptions";
 import { useBrainLoverEmptyState } from "@/features/brainlover/emptyStateFlag";
 import { useBrainLoverSupportBadge } from "@/features/brainlover/useBrainLoverSupportBadge";
 
@@ -34,6 +35,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user?.id && userRole) void syncNotificationMeta(user.id, userRole);
   }, [user?.id, userRole]);
+
+  // Auto-resubscribe on login if push was enabled but subscription lost
+  // (reinstall, clear data, etc.). Runs once per session, silently.
+  useEffect(() => {
+    if (user?.id) void autoResubscribeIfNeeded(user.id);
+  }, [user?.id]);
 
 
   const isPro = userRole === 'pro';

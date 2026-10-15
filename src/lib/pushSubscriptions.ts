@@ -92,6 +92,62 @@ export async function getPushState(): Promise<string> {
 }
 
 /**
+ * Auto-resubscribe on login if the user previously enabled push but the
+ * browser lost the subscription (reinstall, clear data, etc.).
+ * Runs silently — no prompts, no UI. Called once per session on auth init.
+ */
+export async function autoResubscribeIfNeeded(userId: string): Promise<void> {
+  try {
+    // Already running? (session flag)
+    if (typeof window !== "undefined" && sessionStorage.getItem("fb_auto_resubscribed") === "true") {
+      return;
+    }
+
+    // 1. Check stored prefs — user must have explicitly enabled push
+    const { data: prefs, error } = await supabase
+      .from("notification_prefs")
+      .select("channels")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error || !prefs || prefs.channels?.push !== true) {
+      return; // user never enabled push, or prefs missing
+    }
+
+    // 2. Browser permission must already be granted (no silent prompt)
+    if (Notification.permission !== "granted") {
+      return;
+    }
+
+    // 3. Current browser state must NOT already be subscribed
+    const state = await getPushState();
+    if (state === "subscribed") {
+      // Already subscribed — mark done and exit
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("fb_auto_resubscribed", "true");
+      }
+      return;
+    }
+
+    // All conditions met → silently resubscribe
+    console.log("[FB-DEBUG] autoResubscribeIfNeeded: conditions met, subscribing...");
+    const ok = await subscribePush(userId);
+    if (ok) {
+      console.log("[FB-DEBUG] autoResubscribeIfNeeded: resubscribed successfully");
+    } else {
+      console.warn("[FB-DEBUG] autoResubscribeIfNeeded: subscribePush returned false");
+    }
+
+    // Mark done for this session regardless of outcome (avoid retry loops)
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("fb_auto_resubscribed", "true");
+    }
+  } catch (e) {
+    console.warn("[FB-DEBUG] autoResubscribeIfNeeded failed:", e);
+  }
+}
+
+/**
  * Request permission (if needed), subscribe with the VAPID key, and persist
  * the subscription. Returns true when push is live for this browser.
  */
