@@ -116,6 +116,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               🔧 Debug: Trigger Auto-Resubscribe
             </button>
           )}
+          {/* TEMP DEBUG: Show auth state */}
+          {!isProdHost() && (
+            <div className="mt-2 p-2 text-[10px] bg-gray-100 rounded text-left font-mono text-amber-800 border border-amber-300">
+              <div>isProdHost: {String(isProdHost())}</div>
+              <div>user.id: {user?.id ?? 'null'}</div>
+              <div>userRole: {userRole ?? 'null'}</div>
+              <div>isFreebrainer: {String(userRole === 'freebrainer')}</div>
+            </div>
+          )}
         </div>
       </main>
 
