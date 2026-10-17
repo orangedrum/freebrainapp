@@ -101,20 +101,39 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           )}
           {/* TEMP DEBUG: Auto-resubscribe trigger (remove after verification) */}
           {!isProdHost() && user?.id && userRole === 'freebrainer' && (
-            <button
-              onClick={async () => {
-                try {
-                  const { diagnoseAutoResubscribe } = await import('@/lib/pushSubscriptions');
-                  const report = await diagnoseAutoResubscribe(user.id);
-                  alert(report);
-                } catch (e) {
-                  alert('Error: ' + String(e));
-                }
-              }}
-              className="mt-4 px-3 py-1.5 text-xs bg-amber-100 text-amber-800 rounded border border-amber-300"
-            >
-              🔧 Debug: Trigger Auto-Resubscribe
-            </button>
+            <>
+              <button
+                onClick={async () => {
+                  try {
+                    const { diagnoseAutoResubscribe } = await import('@/lib/pushSubscriptions');
+                    const report = await diagnoseAutoResubscribe(user.id);
+                    alert(report);
+                  } catch (e) {
+                    alert('Error: ' + String(e));
+                  }
+                }}
+                className="mt-4 px-3 py-1.5 text-xs bg-amber-100 text-amber-800 rounded border border-amber-300"
+              >
+                🔧 Debug: Trigger Auto-Resubscribe
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm('Simulate a reinstall: this unsubscribes THIS device, deletes its push row, and reloads. Auto-resubscribe should silently recreate it. Continue?')) return;
+                  try {
+                    const { unsubscribePush } = await import('@/lib/pushSubscriptions');
+                    await unsubscribePush(user.id);
+                    sessionStorage.removeItem('fb_auto_resubscribed');
+                    alert('Unsubscribed + row deleted. Reloading now — after load, check the SQL row reappears.');
+                    location.reload();
+                  } catch (e) {
+                    alert('Error: ' + String(e));
+                  }
+                }}
+                className="mt-2 ml-2 px-3 py-1.5 text-xs bg-amber-100 text-amber-800 rounded border border-amber-300"
+              >
+                🔧 Debug: Simulate Reinstall
+              </button>
+            </>
           )}
           {/* TEMP DEBUG: Show auth state */}
           {!isProdHost() && (

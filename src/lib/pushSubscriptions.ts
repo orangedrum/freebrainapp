@@ -148,56 +148,38 @@ export async function diagnoseAutoResubscribe(userId: string): Promise<string> {
  */
 export async function autoResubscribeIfNeeded(userId: string): Promise<void> {
   try {
-    // Already running? (session flag)
+    // Already handled this session? Don't loop.
     if (typeof window !== "undefined" && sessionStorage.getItem("fb_auto_resubscribed") === "true") {
-      console.log("[FB-DEBUG] autoResubscribeIfNeeded: already ran this session (sessionStorage flag set), exiting");
       return;
     }
 
-    // 1. Check stored prefs — user must have explicitly enabled push
-    console.log("[FB-DEBUG] autoResubscribeIfNeeded: fetching prefs for user", userId);
+    // 1. User must have DELIBERATELY enabled push (intent lives server-side).
     const { data: prefs, error } = await supabase
       .from("notification_prefs")
       .select("channels")
       .eq("user_id", userId)
       .maybeSingle();
 
-    console.log("[FB-DEBUG] autoResubscribeIfNeeded: prefs fetch result", { prefs, error });
-
     if (error || !prefs || prefs.channels?.push !== true) {
-      console.log("[FB-DEBUG] autoResubscribeIfNeeded: EXIT - prefs missing or push not enabled", { prefs, error, pushEnabled: prefs?.channels?.push });
-      return; // user never enabled push, or prefs missing
-    }
-
-    // 2. Browser permission must already be granted (no silent prompt)
-    console.log("[FB-DEBUG] autoResubscribeIfNeeded: Notification.permission =", Notification.permission);
-    if (Notification.permission !== "granted") {
-      console.log("[FB-DEBUG] autoResubscribeIfNeeded: EXIT - permission not granted, current:", Notification.permission);
+      console.warn("[FB-DEBUG] autoResubscribeIfNeeded: skipped — push intent off or prefs unavailable", { push: prefs?.channels?.push, error: error?.message });
       return;
     }
 
-    // 3. Current browser state must NOT already be subscribed
+    // 2. Permission must already be granted — we NEVER prompt here.
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") {
+      return;
+    }
+
+    // 3. Only act when the browser actually lost its subscription.
     const state = await getPushState();
-    console.log("[FB-DEBUG] autoResubscribeIfNeeded: getPushState() =", state);
     if (state === "subscribed") {
-      // Already subscribed — mark done and exit
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("fb_auto_resubscribed", "true");
-      }
-      console.log("[FB-DEBUG] autoResubscribeIfNeeded: already subscribed, marking done and exiting");
+      if (typeof window !== "undefined") sessionStorage.setItem("fb_auto_resubscribed", "true");
       return;
     }
 
-    // All conditions met → silently resubscribe
-    console.log("[FB-DEBUG] autoResubscribeIfNeeded: ALL CONDITIONS MET, calling subscribePush...");
     const ok = await subscribePush(userId);
-    if (ok) {
-      console.log("[FB-DEBUG] autoResubscribeIfNeeded: resubscribed successfully");
-    } else {
-      console.warn("[FB-DEBUG] autoResubscribeIfNeeded: subscribePush returned false");
-    }
+    console.warn("[FB-DEBUG] autoResubscribeIfNeeded: silent resubscribe", ok ? "succeeded" : "failed");
 
-    // Mark done for this session regardless of outcome (avoid retry loops)
     if (typeof window !== "undefined") {
       sessionStorage.setItem("fb_auto_resubscribed", "true");
     }

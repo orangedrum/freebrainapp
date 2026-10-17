@@ -47,9 +47,12 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
 
   // Load prefs on mount (and when user/role changes). The server row (if any)
   // is merged in first so a toggle set on another device is honored. A push
-  // toggle stuck ON with no real subscription lies (nothing can arrive) —
-  // reconcile it against the browser's actual subscription state once per load,
-  // but ONLY for the owner's own device.
+  // toggle is the user's INTENT, not a mirror of this device: a merely missing
+  // subscription is recoverable — autoResubscribeIfNeeded() silently restores
+  // it on login. So we only clear the intent on a HARD block (permission
+  // revoked / browser can't push). Never flip it off just because this browser
+  // has no subscription — doing so would permanently disarm auto-resubscribe
+  // (which requires push === true) and would also clobber other devices.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -60,7 +63,8 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
       if (!isSelf || !stored.channels.push) return;
       try {
         const state = await getPushState();
-        if (state === "subscribed" || cancelled) return;
+        if (cancelled) return;
+        if (state !== "denied" && state !== "unsupported") return;
         setPrefs((prev) => {
           if (!prev || !prev.channels.push) return prev;
           const next = { ...prev, channels: { ...prev.channels, push: false } };
