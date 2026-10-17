@@ -104,9 +104,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={async () => {
                 try {
-                  const { autoResubscribeIfNeeded } = await import('@/lib/pushSubscriptions');
-                  await autoResubscribeIfNeeded(user.id);
-                  alert('Auto-resubscribe done! Check console for [FB-DEBUG] logs.');
+                  const { diagnoseAutoResubscribe } = await import('@/lib/pushSubscriptions');
+                  const report = await diagnoseAutoResubscribe(user.id);
+                  alert(report);
                 } catch (e) {
                   alert('Error: ' + String(e));
                 }

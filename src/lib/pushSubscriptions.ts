@@ -92,6 +92,56 @@ export async function getPushState(): Promise<string> {
 }
 
 /**
+ * TEMP DIAGNOSTIC (remove after auto-resubscribe verification):
+ * Runs every auto-resubscribe gate and returns a plain-English report.
+ * Lets testers see WHY a resubscribe did or did not happen on a phone,
+ * where DevTools console is unavailable. Calls subscribePush when all
+ * gates pass.
+ */
+export async function diagnoseAutoResubscribe(userId: string): Promise<string> {
+  const lines: string[] = [];
+  lines.push(`userId: ${userId || "(empty)"}`);
+  lines.push(`sessionFlag: ${sessionStorage.getItem("fb_auto_resubscribed") ?? "unset"}`);
+  lines.push(`isPushSupported: ${isPushSupported()}`);
+  try {
+    lines.push(`Notification.permission: ${typeof Notification !== "undefined" ? Notification.permission : "(no Notification API)"}`);
+  } catch {
+    lines.push(`Notification.permission: (threw)`);
+  }
+
+  let pushPref = "?";
+  try {
+    const { data, error } = await supabase
+      .from("notification_prefs")
+      .select("channels")
+      .eq("user_id", userId)
+      .maybeSingle();
+    pushPref = `channels.push=${String((data as any)?.channels?.push)} err=${error?.message ?? "none"}`;
+  } catch (e) {
+    pushPref = `threw: ${String(e)}`;
+  }
+  lines.push(`prefs: ${pushPref}`);
+
+  try {
+    lines.push(`pushState: ${await getPushState()}`);
+  } catch (e) {
+    lines.push(`pushState: threw ${String(e)}`);
+  }
+
+  try {
+    lines.push(`vapidKey: ${diagnoseVapidKey(vapidPublicKey() ?? "") ?? "ok"}`);
+  } catch (e) {
+    lines.push(`vapidKey: threw ${String(e)}`);
+  }
+
+  lines.push("--- attempting resubscribe ---");
+  sessionStorage.removeItem("fb_auto_resubscribed");
+  const ok = await subscribePush(userId);
+  lines.push(`subscribePush result: ${ok}`);
+  return lines.join("\n");
+}
+
+/**
  * Auto-resubscribe on login if the user previously enabled push but the
  * browser lost the subscription (reinstall, clear data, etc.).
  * Runs silently — no prompts, no UI. Called once per session on auth init.
@@ -100,37 +150,46 @@ export async function autoResubscribeIfNeeded(userId: string): Promise<void> {
   try {
     // Already running? (session flag)
     if (typeof window !== "undefined" && sessionStorage.getItem("fb_auto_resubscribed") === "true") {
+      console.log("[FB-DEBUG] autoResubscribeIfNeeded: already ran this session (sessionStorage flag set), exiting");
       return;
     }
 
     // 1. Check stored prefs — user must have explicitly enabled push
+    console.log("[FB-DEBUG] autoResubscribeIfNeeded: fetching prefs for user", userId);
     const { data: prefs, error } = await supabase
       .from("notification_prefs")
       .select("channels")
       .eq("user_id", userId)
       .maybeSingle();
 
+    console.log("[FB-DEBUG] autoResubscribeIfNeeded: prefs fetch result", { prefs, error });
+
     if (error || !prefs || prefs.channels?.push !== true) {
+      console.log("[FB-DEBUG] autoResubscribeIfNeeded: EXIT - prefs missing or push not enabled", { prefs, error, pushEnabled: prefs?.channels?.push });
       return; // user never enabled push, or prefs missing
     }
 
     // 2. Browser permission must already be granted (no silent prompt)
+    console.log("[FB-DEBUG] autoResubscribeIfNeeded: Notification.permission =", Notification.permission);
     if (Notification.permission !== "granted") {
+      console.log("[FB-DEBUG] autoResubscribeIfNeeded: EXIT - permission not granted, current:", Notification.permission);
       return;
     }
 
     // 3. Current browser state must NOT already be subscribed
     const state = await getPushState();
+    console.log("[FB-DEBUG] autoResubscribeIfNeeded: getPushState() =", state);
     if (state === "subscribed") {
       // Already subscribed — mark done and exit
       if (typeof window !== "undefined") {
         sessionStorage.setItem("fb_auto_resubscribed", "true");
       }
+      console.log("[FB-DEBUG] autoResubscribeIfNeeded: already subscribed, marking done and exiting");
       return;
     }
 
     // All conditions met → silently resubscribe
-    console.log("[FB-DEBUG] autoResubscribeIfNeeded: conditions met, subscribing...");
+    console.log("[FB-DEBUG] autoResubscribeIfNeeded: ALL CONDITIONS MET, calling subscribePush...");
     const ok = await subscribePush(userId);
     if (ok) {
       console.log("[FB-DEBUG] autoResubscribeIfNeeded: resubscribed successfully");

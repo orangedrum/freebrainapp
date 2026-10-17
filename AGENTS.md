@@ -393,3 +393,22 @@ steps is how multi-hour spirals happen:
 6. **One decisive test per round.** Each debugging turn must name the single
    observation that would kill the leading theory, and stop when it lands.
    No stacked hypotheses; no second theory until the first is falsified.
+
+---
+
+## 7. Deployment Authorization (Non-Negotiable)
+
+**Never deploy without explicit user confirmation.**
+
+Before any `git push` that triggers a deploy (Vercel, Supabase, etc.):
+1. Show the exact `git push` command I intend to run.
+2. Wait for the user to explicitly say "push" or "deploy".
+3. Only then run the command.
+
+This applies to:
+- Vercel (web app deploys on `git push` to `main` or preview branches)
+- Supabase Edge Functions (Dashboard paste or `supabase functions deploy`)
+- Supabase migrations (Dashboard SQL editor or `supabase db push`)
+- Any other service that auto-deploys on push
+
+**Exception:** None. Zero exceptions. If the user hasn't explicitly said "push" or "deploy", do not push.
