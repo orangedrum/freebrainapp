@@ -121,10 +121,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   if (!confirm('Simulate a reinstall: this unsubscribes THIS device, deletes its push row, and reloads. Auto-resubscribe should silently recreate it. Continue?')) return;
                   try {
                     const { unsubscribePush } = await import('@/lib/pushSubscriptions');
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                      const p = await Notification.requestPermission();
+                      if (p !== 'granted') { alert('Permission not granted — cannot run the test. Current: ' + p); return; }
+                    }
                     await unsubscribePush(user.id);
                     sessionStorage.removeItem('fb_auto_resubscribed');
                     alert('Unsubscribed + row deleted. Reloading now — after load, check the SQL row reappears.');
-                    location.reload();
+                    window.location.reload();
                   } catch (e) {
                     alert('Error: ' + String(e));
                   }
